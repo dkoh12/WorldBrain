@@ -30,48 +30,7 @@ interface NotificationsDropdownProps {
 }
 
 export default function NotificationsDropdown({ isOpen, onClose, onUnreadCountChange }: NotificationsDropdownProps) {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'success',
-      title: 'Project Shared Successfully',
-      message: 'Your 3D design "Modern Sculpture" has been shared with 5 people.',
-      time: '2 minutes ago',
-      isRead: false
-    },
-    {
-      id: '2',
-      type: 'info',
-      title: 'New Collaboration Invite',
-      message: 'Alex invited you to collaborate on "Music Project Alpha".',
-      time: '1 hour ago',
-      isRead: false
-    },
-    {
-      id: '3',
-      type: 'success',
-      title: 'Download Complete',
-      message: 'Your video project "Creative Showcase" has been exported successfully.',
-      time: '3 hours ago',
-      isRead: true
-    },
-    {
-      id: '4',
-      type: 'info',
-      title: 'AI Feature Update',
-      message: 'New AI assistance features are now available in the Code Editor.',
-      time: '1 day ago',
-      isRead: true
-    },
-    {
-      id: '5',
-      type: 'warning',
-      title: 'Storage Reminder',
-      message: 'You\'re using 85% of your storage. Consider upgrading for more space.',
-      time: '2 days ago',
-      isRead: true
-    }
-  ]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const unreadCount = notifications.filter(n => !n.isRead).length;
 

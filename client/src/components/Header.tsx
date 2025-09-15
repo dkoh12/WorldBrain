@@ -12,7 +12,7 @@ export default function Header() {
   const [, navigate] = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(3); // Start with initial count
+  const [unreadCount, setUnreadCount] = useState(0); // Start with no notifications
 
   const handleSearch = () => {
     setShowSearch(!showSearch);
