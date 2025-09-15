@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { Terminal } from "@xterm/xterm";
-import { FitAddon } from "@xterm/addon-fit";
-import "@xterm/xterm/css/xterm.css";
+import { Terminal } from "xterm";
+import { FitAddon } from "xterm-addon-fit";
+import "xterm/css/xterm.css";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Play, Square, Trash2, Copy } from "lucide-react";
@@ -30,6 +30,16 @@ export default function TerminalPanel({
   const [activeTab, setActiveTab] = useState("terminal");
   const [exitCode, setExitCode] = useState<number | null>(null);
   const [executionTime, setExecutionTime] = useState<number | null>(null);
+  
+  // Handle terminal fitting when switching back to terminal tab
+  useEffect(() => {
+    if (activeTab === "terminal" && fitAddon.current && isVisible) {
+      // Small delay to ensure DOM is ready
+      setTimeout(() => {
+        fitAddon.current?.fit();
+      }, 100);
+    }
+  }, [activeTab, isVisible]);
 
   useEffect(() => {
     if (isVisible && terminalRef.current && !terminalInstance.current) {
@@ -65,6 +75,7 @@ export default function TerminalPanel({
       terminal.writeln('');
     }
     
+    // Only dispose when panel is completely hidden, not when switching tabs
     return () => {
       if (terminalInstance.current && !isVisible) {
         terminalInstance.current.dispose();
@@ -200,30 +211,32 @@ export default function TerminalPanel({
           <TabsTrigger value="webview" data-testid="tab-webview">Output</TabsTrigger>
         </TabsList>
         
-        <TabsContent value="terminal" className="flex-1 p-0">
+        <TabsContent value="terminal" className="flex-1 p-0" forceMount>
           <div 
             ref={terminalRef} 
-            className="h-full w-full"
+            className={`h-full w-full ${activeTab !== "terminal" ? "hidden" : ""}`}
             data-testid="terminal-content"
           />
         </TabsContent>
         
-        <TabsContent value="webview" className="flex-1 p-1">
-          <Card className="h-full">
-            {htmlContent ? (
-              <iframe
-                srcDoc={htmlContent}
-                sandbox="allow-scripts allow-same-origin"
-                className="w-full h-full border-0 rounded"
-                title="Code Output"
-                data-testid="output-iframe"
-              />
-            ) : (
-              <div className="flex items-center justify-center h-full text-muted-foreground">
-                No visual output
-              </div>
-            )}
-          </Card>
+        <TabsContent value="webview" className="flex-1 p-1" forceMount>
+          <div className={activeTab !== "webview" ? "hidden" : "h-full"}>
+            <Card className="h-full">
+              {htmlContent ? (
+                <iframe
+                  srcDoc={htmlContent}
+                  sandbox="allow-scripts allow-same-origin"
+                  className="w-full h-full border-0 rounded"
+                  title="Code Output"
+                  data-testid="output-iframe"
+                />
+              ) : (
+                <div className="flex items-center justify-center h-full text-muted-foreground">
+                  No visual output
+                </div>
+              )}
+            </Card>
+          </div>
         </TabsContent>
       </Tabs>
     </div>
