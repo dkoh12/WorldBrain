@@ -7,6 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Editor } from "@monaco-editor/react";
 import { replitAI } from "@/lib/replit-ai";
+import { isPreviewMode, buildHtmlRunner } from "@/lib/utils/export-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { 
   Play, 
   Save, 
@@ -32,6 +34,7 @@ interface CodeFile {
 export default function CodeEditor() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState("");
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const editorRef = useRef<any>(null);
   
   // Load files from current project or use defaults
@@ -93,6 +96,13 @@ body {
   const [activeFile, setActiveFile] = useState<string>(() => {
     return files.length > 0 ? files[0].id : "main";
   });
+
+  // Auto-open preview if in preview mode
+  useEffect(() => {
+    if (isPreviewMode()) {
+      setShowPreviewModal(true);
+    }
+  }, []);
 
   const activeFileData = files.find(f => f.id === activeFile);
 
@@ -258,6 +268,18 @@ body {
     if (currentProjectId) {
       projectManager.updateProjectToolData(currentProjectId, 'code', updatedFiles);
     }
+  };
+
+  const handlePreview = () => {
+    setShowPreviewModal(true);
+  };
+
+  const generatePreviewHtml = () => {
+    return buildHtmlRunner(files.map(f => ({
+      name: f.name,
+      content: f.content,
+      language: f.language
+    })));
   };
 
   const getLanguageIcon = (language: string) => {
@@ -497,6 +519,24 @@ body {
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="max-w-4xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Code Preview</DialogTitle>
+          </DialogHeader>
+          <div className="flex-1 border rounded-md overflow-hidden">
+            <iframe
+              srcDoc={generatePreviewHtml()}
+              sandbox="allow-scripts allow-same-origin"
+              className="w-full h-96 border-0"
+              title="Code Preview"
+              data-testid="code-preview-iframe"
+            />
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
