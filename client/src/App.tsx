@@ -9,6 +9,7 @@ import Studio from "@/pages/Studio";
 import Projects from "@/pages/Projects";
 import Gallery from "@/pages/Gallery";
 import Learn from "@/pages/Learn";
+import Profile from "@/pages/Profile";
 import CodeStudio from "@/pages/CodeStudio";
 import ThreeDStudio from "@/pages/ThreeDStudio";
 import MusicStudio from "@/pages/MusicStudio";
@@ -23,6 +24,7 @@ function Router() {
       <Route path="/projects" component={Projects} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/learn" component={Learn} />
+      <Route path="/profile" component={Profile} />
       <Route path="/code" component={CodeStudio} />
       <Route path="/3d" component={ThreeDStudio} />
       <Route path="/music" component={MusicStudio} />
