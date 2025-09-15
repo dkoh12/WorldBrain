@@ -1,23 +1,27 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Search, Settings, User, Menu, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useLocation } from "wouter";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 export default function Header() {
   const [, navigate] = useLocation();
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(3); // Start with initial count
 
   const handleSearch = () => {
     console.log('Search clicked');
   };
 
   const handleNotifications = () => {
-    console.log('Notifications clicked');
+    setShowNotifications(!showNotifications);
   };
 
   const handleProfile = () => {
-    console.log('Profile clicked');
+    navigate('/profile');
   };
 
   const handleMenu = () => {
@@ -94,19 +98,29 @@ export default function Header() {
               >
                 <Bell className="w-4 h-4" />
               </Button>
-              <Badge className="absolute -top-2 -right-2 w-5 h-5 p-0 text-xs bg-destructive text-destructive-foreground flex items-center justify-center" data-testid="badge-notification-count">
-                3
-              </Badge>
+              {unreadCount > 0 && (
+                <Badge className="absolute -top-2 -right-2 w-5 h-5 p-0 text-xs bg-destructive text-destructive-foreground flex items-center justify-center" data-testid="badge-notification-count">
+                  {unreadCount}
+                </Badge>
+              )}
             </div>
 
             <ThemeToggle />
 
-            <Avatar className="w-8 h-8 hover-elevate cursor-pointer" onClick={handleProfile} data-testid="avatar-user">
-              <AvatarImage src="/api/placeholder/32/32" alt="User" />
-              <AvatarFallback>
-                <User className="w-4 h-4" />
-              </AvatarFallback>
-            </Avatar>
+            <div className="relative">
+              <Avatar className="w-8 h-8 hover-elevate cursor-pointer" onClick={handleProfile} data-testid="avatar-user">
+                <AvatarImage src="/api/placeholder/32/32" alt="User" />
+                <AvatarFallback>
+                  <User className="w-4 h-4" />
+                </AvatarFallback>
+              </Avatar>
+              
+              <NotificationsDropdown 
+                isOpen={showNotifications} 
+                onClose={() => setShowNotifications(false)}
+                onUnreadCountChange={setUnreadCount}
+              />
+            </div>
           </div>
         </div>
       </div>
