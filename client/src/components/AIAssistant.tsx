@@ -99,6 +99,7 @@ export default function AIAssistant() {
       }
     } catch (error) {
       console.error('Analysis error:', error);
+      setAiResponse("Sorry, I'm having trouble analyzing right now. Please try again!");
     } finally {
       setIsProcessing(false);
     }
@@ -118,6 +119,7 @@ export default function AIAssistant() {
       }
     } catch (error) {
       console.error('Idea generation error:', error);
+      setAiResponse("Sorry, I'm having trouble generating ideas right now. Please try again!");
     } finally {
       setIsProcessing(false);
     }
@@ -246,6 +248,12 @@ export default function AIAssistant() {
             placeholder="Ask AI anything about your creative work..."
             value={message}
             onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                handleSendMessage();
+              }
+            }}
             className="min-h-[80px] resize-none text-sm"
             data-testid="textarea-ai-chat"
           />
