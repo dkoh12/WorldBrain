@@ -10,6 +10,7 @@ import Projects from "@/pages/Projects";
 import Gallery from "@/pages/Gallery";
 import Learn from "@/pages/Learn";
 import CodeStudio from "@/pages/CodeStudio";
+import ThreeDStudio from "@/pages/ThreeDStudio";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -21,6 +22,7 @@ function Router() {
       <Route path="/gallery" component={Gallery} />
       <Route path="/learn" component={Learn} />
       <Route path="/code" component={CodeStudio} />
+      <Route path="/3d" component={ThreeDStudio} />
       <Route component={NotFound} />
     </Switch>
   );
