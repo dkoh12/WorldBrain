@@ -35,6 +35,73 @@ export default function Home() {
       {/* Hero Section */}
       <Hero />
 
+      {/* Creative Tools Section */}
+      <section className="py-16">
+        <div className="max-w-7xl mx-auto px-4">
+          <div className="text-center mb-12">
+            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20" data-testid="badge-tools">
+              <Sparkles className="w-3 h-3 mr-1" />
+              Creative Suite
+            </Badge>
+            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
+              Your Complete Creative Toolkit
+            </h2>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Four powerful AI-enhanced tools that work seamlessly together to bring your creative visions to life.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            <CreativeModule
+              title="3D Designer"
+              description="AI-powered 3D modeling and animation with real-time rendering"
+              image={threeDImage}
+              features={["Parametric Modeling", "Real-time Ray Tracing", "AI Materials", "Animation Tools"]}
+              status="active"
+              aiSuggestions={5}
+            />
+            
+            <CreativeModule
+              title="Music Studio"
+              description="Intelligent music composition and production suite"
+              image={musicImage}
+              features={["AI Composition", "Multi-track Recording", "Virtual Instruments", "Smart Mixing"]}
+              status="processing"
+              aiSuggestions={3}
+            />
+            
+            <CreativeModule
+              title="Video Editor"
+              description="Professional video editing with AI-powered assistance"
+              image={videoImage}
+              features={["Auto-cut Detection", "Color Grading", "Motion Graphics", "Smart Transitions"]}
+              status="complete"
+              aiSuggestions={2}
+            />
+            
+            <CreativeModule
+              title="Code Editor"
+              description="AI-powered development environment for creative coding"
+              image={codeImage}
+              features={["AI Copilot", "Multi-language Support", "Real-time Collab", "Smart Debugging"]}
+              status="active"
+              aiSuggestions={8}
+            />
+          </div>
+
+          <div className="text-center">
+            <Button 
+              size="lg"
+              onClick={handleGetStarted}
+              data-testid="button-start-creating"
+            >
+              <Zap className="w-5 h-5 mr-2" />
+              Start Creating Now
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* Stats Section */}
       <section className="py-16 bg-muted/30">
         <div className="max-w-7xl mx-auto px-4">
@@ -69,77 +136,6 @@ export default function Home() {
                 </Card>
               );
             })}
-          </div>
-        </div>
-      </section>
-
-      {/* Creative Tools Section */}
-      <section className="py-16">
-        <div className="max-w-7xl mx-auto px-4">
-          <div className="text-center mb-12">
-            <Badge className="mb-4 bg-primary/10 text-primary border-primary/20" data-testid="badge-tools">
-              <Sparkles className="w-3 h-3 mr-1" />
-              Creative Suite
-            </Badge>
-            <h2 className="font-display text-3xl md:text-4xl font-bold mb-4">
-              Your Complete Creative Toolkit
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              Four powerful AI-enhanced tools that work seamlessly together to bring your creative visions to life.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
-            <CreativeModule
-              title="3D Designer"
-              description="AI-powered 3D modeling and animation with real-time rendering"
-              image={threeDImage}
-              features={["Parametric Modeling", "Real-time Ray Tracing", "AI Materials", "Animation Tools"]}
-              progress={75}
-              status="active"
-              aiSuggestions={5}
-            />
-            
-            <CreativeModule
-              title="Music Studio"
-              description="Intelligent music composition and production suite"
-              image={musicImage}
-              features={["AI Composition", "Multi-track Recording", "Virtual Instruments", "Smart Mixing"]}
-              progress={60}
-              status="processing"
-              aiSuggestions={3}
-            />
-            
-            <CreativeModule
-              title="Video Editor"
-              description="Professional video editing with AI-powered assistance"
-              image={videoImage}
-              features={["Auto-cut Detection", "Color Grading", "Motion Graphics", "Smart Transitions"]}
-              progress={100}
-              status="complete"
-              aiSuggestions={2}
-            />
-            
-            <CreativeModule
-              title="Code Editor"
-              description="AI-powered development environment for creative coding"
-              image={codeImage}
-              features={["AI Copilot", "Multi-language Support", "Real-time Collab", "Smart Debugging"]}
-              progress={30}
-              status="active"
-              aiSuggestions={8}
-            />
-          </div>
-
-          <div className="text-center">
-            <Button 
-              size="lg"
-              onClick={handleGetStarted}
-              data-testid="button-start-creating"
-            >
-              <Zap className="w-5 h-5 mr-2" />
-              Start Creating Now
-            </Button>
           </div>
         </div>
       </section>
