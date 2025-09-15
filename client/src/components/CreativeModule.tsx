@@ -150,14 +150,6 @@ export default function CreativeModule({
               {description}
             </p>
           </div>
-          <Button 
-            size="icon" 
-            variant="ghost"
-            onClick={handleOpen}
-            data-testid={`button-open-${title.toLowerCase().replace(' ', '-')}`}
-          >
-            <ExternalLink className="w-4 h-4" />
-          </Button>
         </div>
       </CardHeader>
 
@@ -188,22 +180,6 @@ export default function CreativeModule({
           >
             <Play className="w-3 h-3 mr-1" />
             Preview
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleDownload}
-            data-testid={`button-download-${title.toLowerCase().replace(' ', '-')}`}
-          >
-            <Download className="w-3 h-3" />
-          </Button>
-          <Button 
-            size="sm" 
-            variant="outline"
-            onClick={handleShare}
-            data-testid={`button-share-${title.toLowerCase().replace(' ', '-')}`}
-          >
-            <Share2 className="w-3 h-3" />
           </Button>
         </div>
       </CardContent>
