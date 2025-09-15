@@ -16,6 +16,8 @@ import {
 import { projectManager } from "@/lib/project-manager";
 import { ReplitAI } from "@/lib/replit-ai";
 import { useToast } from "@/hooks/use-toast";
+import { isPreviewMode } from "@/lib/utils/export-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface VideoClip {
   id: string;
@@ -79,6 +81,7 @@ export default function VideoEditor() {
   const [selectedClip, setSelectedClip] = useState<VideoClip | null>(null);
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [projectName, setProjectName] = useState('Untitled Video');
   const [renderProgress, setRenderProgress] = useState(0);
   const [isRendering, setIsRendering] = useState(false);
@@ -136,6 +139,11 @@ export default function VideoEditor() {
 
     initCanvas();
     loadProjectData();
+
+    // Auto-open preview if in preview mode
+    if (isPreviewMode()) {
+      setShowPreviewModal(true);
+    }
 
     return () => {
       if (intervalRef.current) {

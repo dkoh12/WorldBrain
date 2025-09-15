@@ -41,8 +41,8 @@ export default function CodeEditor() {
   const [files, setFiles] = useState<CodeFile[]>(() => {
     const currentProject = projectManager.getCurrentProject();
     
-    if (currentProject && currentProject.data.codeFiles) {
-      return currentProject.data.codeFiles;
+    if (currentProject && currentProject.data.code) {
+      return currentProject.data.code;
     }
     
     // Fall back to localStorage for backward compatibility
