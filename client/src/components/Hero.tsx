@@ -1,15 +1,20 @@
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Play, Sparkles, Users, Zap } from "lucide-react";
+import { useLocation } from "wouter";
 import heroImage from "@assets/generated_images/AI_Creative_Studio_Hero_daee97ae.png";
 
 export default function Hero() {
+  const [, navigate] = useLocation();
+
   const handleGetStarted = () => {
     console.log('Get started clicked');
+    navigate('/studio');
   };
 
   const handleWatchDemo = () => {
     console.log('Watch demo clicked');
+    navigate('/learn');
   };
 
   return (
