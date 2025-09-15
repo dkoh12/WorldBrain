@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ExternalLink, Play, Download, Share2, Bot } from "lucide-react";
+import { useLocation } from "wouter";
 
 interface CreativeModuleProps {
   title: string;
@@ -23,9 +24,17 @@ export default function CreativeModule({
   status = 'active',
   aiSuggestions = 0
 }: CreativeModuleProps) {
+  const [, navigate] = useLocation();
   
   const handleOpen = () => {
     console.log(`Opening ${title} module`);
+    
+    // Navigate to specific creative tool
+    if (title.toLowerCase().includes('code')) {
+      navigate('/code');
+    } else {
+      console.log(`${title} tool will be available soon!`);
+    }
   };
 
   const handlePreview = () => {
