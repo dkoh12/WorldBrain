@@ -9,6 +9,7 @@ import Studio from "@/pages/Studio";
 import Projects from "@/pages/Projects";
 import Gallery from "@/pages/Gallery";
 import Learn from "@/pages/Learn";
+import CodeStudio from "@/pages/CodeStudio";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -19,6 +20,7 @@ function Router() {
       <Route path="/projects" component={Projects} />
       <Route path="/gallery" component={Gallery} />
       <Route path="/learn" component={Learn} />
+      <Route path="/code" component={CodeStudio} />
       <Route component={NotFound} />
     </Switch>
   );
