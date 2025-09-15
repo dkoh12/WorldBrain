@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import { projectManager } from "@/lib/project-manager";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -29,13 +30,19 @@ interface CodeFile {
 }
 
 export default function CodeEditor() {
-  const [activeFile, setActiveFile] = useState<string>("main");
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState("");
   const editorRef = useRef<any>(null);
   
-  // Load files from localStorage or use defaults
+  // Load files from current project or use defaults
   const [files, setFiles] = useState<CodeFile[]>(() => {
+    const currentProject = projectManager.getCurrentProject();
+    
+    if (currentProject && currentProject.data.codeFiles) {
+      return currentProject.data.codeFiles;
+    }
+    
+    // Fall back to localStorage for backward compatibility
     const saved = localStorage.getItem('codeEditor_files');
     if (saved) {
       try {
@@ -82,6 +89,11 @@ body {
     ];
   });
 
+  // Set active file to first available file
+  const [activeFile, setActiveFile] = useState<string>(() => {
+    return files.length > 0 ? files[0].id : "main";
+  });
+
   const activeFileData = files.find(f => f.id === activeFile);
 
   const handleEditorDidMount = (editor: any, monaco: any) => {
@@ -116,9 +128,16 @@ body {
     
     setFiles(updatedFiles);
     
-    // Auto-save to localStorage (debounced would be better, but this works for demo)
+    // Save to current project and localStorage (auto-save)
     setTimeout(() => {
+      // Save to localStorage for backward compatibility
       localStorage.setItem('codeEditor_files', JSON.stringify(updatedFiles));
+      
+      // Save to current project if one exists
+      const currentProjectId = projectManager.getCurrentProjectId();
+      if (currentProjectId) {
+        projectManager.updateProjectToolData(currentProjectId, 'code', updatedFiles);
+      }
     }, 1000);
   };
 
@@ -128,8 +147,24 @@ body {
   };
 
   const handleSaveProject = () => {
+    // Save to localStorage for backward compatibility
     localStorage.setItem('codeEditor_files', JSON.stringify(files));
-    console.log('Project saved to localStorage');
+    
+    // Save to current project
+    const currentProjectId = projectManager.getCurrentProjectId();
+    if (currentProjectId) {
+      projectManager.updateProjectToolData(currentProjectId, 'code', files);
+      console.log('Project saved to project manager');
+    } else {
+      // Create new project if none exists
+      const newProject = projectManager.createProject(
+        `Code Project ${new Date().toLocaleDateString()}`,
+        "Created from Code Editor",
+        ['code']
+      );
+      projectManager.updateProjectToolData(newProject.id, 'code', files);
+      console.log('New project created and saved');
+    }
   };
 
   const handleGenerateCode = async () => {
@@ -214,8 +249,15 @@ body {
       content: "// New file created with AI assistance\n\n"
     };
     
-    setFiles(prev => [...prev, newFile]);
+    const updatedFiles = [...files, newFile];
+    setFiles(updatedFiles);
     setActiveFile(newId);
+    
+    // Save to current project
+    const currentProjectId = projectManager.getCurrentProjectId();
+    if (currentProjectId) {
+      projectManager.updateProjectToolData(currentProjectId, 'code', updatedFiles);
+    }
   };
 
   const getLanguageIcon = (language: string) => {

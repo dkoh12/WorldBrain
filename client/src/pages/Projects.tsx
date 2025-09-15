@@ -1,252 +1,463 @@
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Progress } from "@/components/ui/progress";
-import { FolderOpen, Plus, Search, Filter, MoreHorizontal, Users, Calendar, Star } from "lucide-react";
-
-interface Project {
-  id: number;
-  name: string;
-  type: string;
-  progress: number;
-  collaborators: number;
-  lastModified: string;
-  status: 'active' | 'completed' | 'draft';
-  thumbnail: string;
-}
+import { Input } from "@/components/ui/input";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+import { 
+  Search, 
+  Plus, 
+  FolderOpen, 
+  Clock, 
+  Star, 
+  Filter,
+  MoreVertical,
+  Play,
+  Edit,
+  Trash2,
+  Share2,
+  Download,
+  Copy,
+  Code2,
+  Palette,
+  Music,
+  Video,
+  Folder,
+  Calendar,
+  Users
+} from "lucide-react";
+import { 
+  projectManager, 
+  CreativeProject, 
+  formatProjectDate, 
+  getProjectIcon, 
+  getToolDisplayName 
+} from "@/lib/project-manager";
 
 export default function Projects() {
-  // TODO: Remove mock functionality - replace with real project data
-  const projects: Project[] = [
-    {
-      id: 1,
-      name: "Futuristic City Model",
-      type: "3D Design",
-      progress: 85,
-      collaborators: 3,
-      lastModified: "2 hours ago",
-      status: 'active',
-      thumbnail: "/api/placeholder/200/120"
-    },
-    {
-      id: 2,
-      name: "Epic Soundtrack",
-      type: "Music",
-      progress: 100,
-      collaborators: 2,
-      lastModified: "1 day ago", 
-      status: 'completed',
-      thumbnail: "/api/placeholder/200/120"
-    },
-    {
-      id: 3,
-      name: "Product Demo Video",
-      type: "Video",
-      progress: 60,
-      collaborators: 4,
-      lastModified: "3 hours ago",
-      status: 'active',
-      thumbnail: "/api/placeholder/200/120"
-    },
-    {
-      id: 4,
-      name: "Interactive Dashboard",
-      type: "Code",
-      progress: 45,
-      collaborators: 1,
-      lastModified: "5 hours ago",
-      status: 'active',
-      thumbnail: "/api/placeholder/200/120"
-    },
-    {
-      id: 5,
-      name: "Character Animation",
-      type: "3D Design",
-      progress: 25,
-      collaborators: 2,
-      lastModified: "1 week ago",
-      status: 'draft',
-      thumbnail: "/api/placeholder/200/120"
-    },
-    {
-      id: 6,
-      name: "Ambient Soundscape",
-      type: "Music",
-      progress: 90,
-      collaborators: 1,
-      lastModified: "4 days ago",
-      status: 'active',
-      thumbnail: "/api/placeholder/200/120"
-    }
-  ];
+  const [projects, setProjects] = useState<CreativeProject[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterTool, setFilterTool] = useState("all");
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newProjectDescription, setNewProjectDescription] = useState("");
+  const { toast } = useToast();
+  const [, navigate] = useLocation();
+
+  // Load projects on component mount
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = () => {
+    const allProjects = projectManager.getAllProjects();
+    setProjects(allProjects);
+  };
 
   const handleCreateProject = () => {
-    console.log('Creating new project');
-  };
+    if (!newProjectName.trim()) {
+      toast({
+        title: "Project name required",
+        description: "Please enter a name for your project",
+        variant: "destructive"
+      });
+      return;
+    }
 
-  const handleOpenProject = (projectId: number) => {
-    console.log('Opening project:', projectId);
-  };
-
-  const handleSearchProjects = () => {
-    console.log('Searching projects');
-  };
-
-  const handleFilterProjects = () => {
-    console.log('Filtering projects');
-  };
-
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'active': return 'bg-green-500';
-      case 'completed': return 'bg-blue-500';
-      case 'draft': return 'bg-yellow-500';
-      default: return 'bg-gray-500';
+    try {
+      const newProject = projectManager.createProject(
+        newProjectName.trim(), 
+        newProjectDescription.trim()
+      );
+      
+      loadProjects();
+      setIsCreateDialogOpen(false);
+      setNewProjectName("");
+      setNewProjectDescription("");
+      
+      toast({
+        title: "Project created!",
+        description: `"${newProject.name}" is ready for your creativity`,
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to create project",
+        description: "Please try again",
+        variant: "destructive"
+      });
     }
   };
 
-  const getTypeIcon = (type: string) => {
-    switch(type) {
-      case '3D Design': return '🎨';
-      case 'Music': return '🎵';
-      case 'Video': return '🎬';
-      case 'Code': return '💻';
-      default: return '📁';
+  const handleOpenProject = (projectId: string) => {
+    projectManager.setCurrentProject(projectId);
+    const project = projectManager.getProject(projectId);
+    
+    if (project) {
+      toast({
+        title: `Opened "${project.name}"`,
+        description: "Continue your creative work!",
+      });
+      
+      // Navigate based on primary tool or to studio
+      if (project.tools.includes('code')) {
+        navigate('/code');
+      } else {
+        navigate('/studio');
+      }
     }
   };
+
+  const handleDuplicateProject = (projectId: string) => {
+    const duplicated = projectManager.duplicateProject(projectId);
+    
+    if (duplicated) {
+      loadProjects();
+      toast({
+        title: "Project duplicated!",
+        description: `Created "${duplicated.name}"`,
+      });
+    }
+  };
+
+  const handleDeleteProject = (projectId: string) => {
+    const project = projectManager.getProject(projectId);
+    
+    if (project && window.confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+      if (projectManager.deleteProject(projectId)) {
+        loadProjects();
+        toast({
+          title: "Project deleted",
+          description: `"${project.name}" has been removed`,
+        });
+      }
+    }
+  };
+
+  const handleExportProject = (projectId: string) => {
+    projectManager.exportProject(projectId);
+    
+    toast({
+      title: "Project exported!",
+      description: "Download will start shortly",
+    });
+  };
+
+  const getStatusColor = (tools: string[]) => {
+    if (tools.length === 0) return 'bg-gray-500/10 text-gray-600';
+    if (tools.length === 1) return 'bg-yellow-500/10 text-yellow-600';
+    if (tools.length >= 2) return 'bg-green-500/10 text-green-600';
+    return 'bg-blue-500/10 text-blue-600';
+  };
+
+  const getStatusText = (tools: string[]) => {
+    if (tools.length === 0) return 'Draft';
+    if (tools.length === 1) return 'In Progress';
+    if (tools.length >= 2) return 'Multi-Tool';
+    return 'Active';
+  };
+
+  const getToolIcon = (tool: string) => {
+    switch (tool.toLowerCase()) {
+      case 'code':
+        return <Code2 className="w-4 h-4" />;
+      case '3d':
+        return <Palette className="w-4 h-4" />;
+      case 'music':
+        return <Music className="w-4 h-4" />;
+      case 'video':
+        return <Video className="w-4 h-4" />;
+      default:
+        return <Folder className="w-4 h-4" />;
+    }
+  };
+
+  // Filter projects based on search and tool filter
+  const filteredProjects = projects.filter(project => {
+    const matchesSearch = searchQuery === "" || 
+      project.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      project.description.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    const matchesTool = filterTool === "all" || 
+      project.tools.some(tool => tool.toLowerCase().includes(filterTool.toLowerCase()));
+
+    return matchesSearch && matchesTool;
+  });
+
+  // Get unique tools for filter dropdown
+  const availableTools = Array.from(new Set(projects.flatMap(p => p.tools)));
+  const stats = projectManager.getProjectStats();
 
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-7xl mx-auto px-4 py-6">
-        {/* Projects Header */}
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="font-display text-3xl font-bold mb-2">My Projects</h1>
-            <p className="text-muted-foreground">Manage your creative projects and collaborations</p>
+            <h1 className="font-display text-3xl font-bold mb-2">Creative Projects</h1>
+            <p className="text-muted-foreground">Manage your AI-powered creative work</p>
           </div>
-          <Button onClick={handleCreateProject} data-testid="button-create-project">
-            <Plus className="w-4 h-4 mr-2" />
-            New Project
-          </Button>
+          
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-create-project">
+                <Plus className="w-4 h-4 mr-2" />
+                New Project
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Create New Project</DialogTitle>
+                <DialogDescription>
+                  Start a new creative project with AI assistance
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="project-name">Project Name</Label>
+                  <Input
+                    id="project-name"
+                    placeholder="My Amazing Project"
+                    value={newProjectName}
+                    onChange={(e) => setNewProjectName(e.target.value)}
+                    data-testid="input-project-name"
+                  />
+                </div>
+                
+                <div className="grid gap-2">
+                  <Label htmlFor="project-description">Description (Optional)</Label>
+                  <Textarea
+                    id="project-description"
+                    placeholder="Describe your creative vision..."
+                    value={newProjectDescription}
+                    onChange={(e) => setNewProjectDescription(e.target.value)}
+                    data-testid="input-project-description"
+                  />
+                </div>
+              </div>
+              
+              <div className="flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleCreateProject} data-testid="button-confirm-create">
+                  Create Project
+                </Button>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
 
-        {/* Search and Filter Bar */}
+        {/* Search and Filter */}
         <div className="flex gap-4 mb-6">
           <div className="flex-1 relative">
             <Search className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-            <input 
-              type="text" 
+            <Input
               placeholder="Search projects..."
-              className="w-full pl-10 pr-4 py-2 border border-border rounded-lg bg-background"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10"
               data-testid="input-search-projects"
             />
           </div>
-          <Button variant="outline" onClick={handleFilterProjects} data-testid="button-filter">
-            <Filter className="w-4 h-4 mr-2" />
-            Filter
-          </Button>
+          
+          <Select value={filterTool} onValueChange={setFilterTool}>
+            <SelectTrigger className="w-48" data-testid="select-filter-tool">
+              <Filter className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="All Tools" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Tools</SelectItem>
+              {availableTools.map(tool => (
+                <SelectItem key={tool} value={tool.toLowerCase()}>
+                  <div className="flex items-center gap-2">
+                    {getToolIcon(tool)}
+                    {getToolDisplayName(tool)}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Project Stats */}
+        {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-primary mb-1">{projects.length}</div>
+              <div className="text-2xl font-bold text-primary mb-1">{stats.totalProjects}</div>
               <div className="text-sm text-muted-foreground">Total Projects</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-green-600 mb-1">{projects.filter(p => p.status === 'active').length}</div>
-              <div className="text-sm text-muted-foreground">Active</div>
+              <div className="text-2xl font-bold text-green-600 mb-1">{stats.totalTools}</div>
+              <div className="text-sm text-muted-foreground">Tools Used</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-blue-600 mb-1">{projects.filter(p => p.status === 'completed').length}</div>
-              <div className="text-sm text-muted-foreground">Completed</div>
+              <div className="text-2xl font-bold text-blue-600 mb-1">{stats.recentProjects.length}</div>
+              <div className="text-sm text-muted-foreground">Recent Work</div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-2xl font-bold text-yellow-600 mb-1">{projects.filter(p => p.status === 'draft').length}</div>
-              <div className="text-sm text-muted-foreground">Drafts</div>
+              <div className="text-2xl font-bold text-purple-600 mb-1">
+                {stats.topTools[0]?.count || 0}
+              </div>
+              <div className="text-sm text-muted-foreground">Top Tool Uses</div>
             </CardContent>
           </Card>
         </div>
 
         {/* Projects Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {projects.map((project) => (
-            <Card key={project.id} className="hover-elevate cursor-pointer" onClick={() => handleOpenProject(project.id)} data-testid={`project-card-${project.id}`}>
-              <div className="relative">
-                <div 
-                  className="h-32 bg-muted rounded-t-lg bg-cover bg-center"
-                  style={{ backgroundImage: `url(${project.thumbnail})` }}
-                />
-                <div className="absolute top-2 right-2 flex gap-1">
-                  <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm text-xs" data-testid={`badge-type-${project.id}`}>
-                    {getTypeIcon(project.type)} {project.type}
-                  </Badge>
-                  <div className={`w-2 h-2 rounded-full ${getStatusColor(project.status)}`} />
-                </div>
-              </div>
-
-              <CardContent className="p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <h3 className="font-semibold text-lg truncate pr-2" data-testid={`project-name-${project.id}`}>
-                    {project.name}
-                  </h3>
-                  <Button variant="ghost" size="icon" className="flex-shrink-0">
-                    <MoreHorizontal className="w-4 h-4" />
-                  </Button>
-                </div>
-
-                <div className="space-y-3">
-                  <div>
-                    <div className="flex justify-between text-sm mb-1">
-                      <span className="text-muted-foreground">Progress</span>
-                      <span className="font-medium">{project.progress}%</span>
+        {filteredProjects.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.map((project) => (
+              <Card 
+                key={project.id} 
+                className="hover-elevate cursor-pointer" 
+                onClick={() => handleOpenProject(project.id)}
+                data-testid={`project-card-${project.id}`}
+              >
+                <CardHeader className="pb-3">
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-lg truncate mb-1" data-testid={`project-name-${project.id}`}>
+                        {project.name}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground line-clamp-2">
+                        {project.description || "No description"}
+                      </p>
                     </div>
-                    <Progress value={project.progress} className="h-2" data-testid={`progress-${project.id}`} />
+                    
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="w-4 h-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => handleOpenProject(project.id)}>
+                          <Play className="w-4 h-4 mr-2" />
+                          Open
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleDuplicateProject(project.id)}>
+                          <Copy className="w-4 h-4 mr-2" />
+                          Duplicate
+                        </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleExportProject(project.id)}>
+                          <Download className="w-4 h-4 mr-2" />
+                          Export
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteProject(project.id)}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="w-4 h-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
+                </CardHeader>
 
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Users className="w-3 h-3" />
-                      <span>{project.collaborators} collaborators</span>
+                <CardContent className="pt-0">
+                  <div className="space-y-3">
+                    {/* Tools Used */}
+                    <div className="flex flex-wrap gap-1">
+                      {project.tools.slice(0, 3).map((tool) => (
+                        <Badge key={tool} variant="secondary" className="text-xs">
+                          <div className="flex items-center gap-1">
+                            {getToolIcon(tool)}
+                            {getToolDisplayName(tool)}
+                          </div>
+                        </Badge>
+                      ))}
+                      {project.tools.length > 3 && (
+                        <Badge variant="outline" className="text-xs">
+                          +{project.tools.length - 3} more
+                        </Badge>
+                      )}
                     </div>
-                    <div className="flex items-center gap-1 text-muted-foreground">
-                      <Calendar className="w-3 h-3" />
-                      <span>{project.lastModified}</span>
-                    </div>
-                  </div>
 
-                  <div className="flex justify-between items-center pt-2">
-                    <Badge variant="outline" className={`capitalize ${project.status === 'completed' ? 'bg-blue-50 text-blue-700' : project.status === 'active' ? 'bg-green-50 text-green-700' : 'bg-yellow-50 text-yellow-700'}`}>
-                      {project.status}
-                    </Badge>
-                    <Button size="sm" variant="ghost" data-testid={`button-favorite-${project.id}`}>
-                      <Star className="w-3 h-3" />
+                    {/* Status and Date */}
+                    <div className="flex items-center justify-between text-sm">
+                      <Badge className={getStatusColor(project.tools)}>
+                        {getStatusText(project.tools)}
+                      </Badge>
+                      
+                      <div className="flex items-center gap-1 text-muted-foreground">
+                        <Calendar className="w-3 h-3" />
+                        <span>{formatProjectDate(project.updatedAt)}</span>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Button 
+                      size="sm" 
+                      className="w-full" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleOpenProject(project.id);
+                      }}
+                      data-testid={`button-open-${project.id}`}
+                    >
+                      <Play className="w-4 h-4 mr-2" />
+                      Continue Working
                     </Button>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* Empty State for when no projects match filter */}
-        {projects.length === 0 && (
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        ) : (
+          /* Empty State */
           <div className="text-center py-12">
-            <FolderOpen className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="font-display text-xl font-semibold mb-2">No projects found</h3>
-            <p className="text-muted-foreground mb-4">Create your first project to get started</p>
-            <Button onClick={handleCreateProject}>
-              <Plus className="w-4 h-4 mr-2" />
-              Create Project
-            </Button>
+            <FolderOpen className="w-16 h-16 text-muted-foreground mx-auto mb-4" />
+            <h3 className="font-display text-xl font-semibold mb-2">
+              {projects.length === 0 ? "No projects yet" : "No projects match your search"}
+            </h3>
+            <p className="text-muted-foreground mb-6">
+              {projects.length === 0 
+                ? "Create your first AI-powered creative project to get started"
+                : "Try adjusting your search or filter criteria"
+              }
+            </p>
+            {projects.length === 0 && (
+              <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button size="lg">
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Project
+                  </Button>
+                </DialogTrigger>
+              </Dialog>
+            )}
           </div>
         )}
       </div>
