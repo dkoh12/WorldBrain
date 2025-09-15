@@ -4,7 +4,7 @@ import CollaborationPanel from "@/components/CollaborationPanel";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, FolderOpen, Save, Settings } from "lucide-react";
+import { Plus, Settings } from "lucide-react";
 
 // Import generated images
 import threeDImage from "@assets/generated_images/3D_Design_Interface_68eed078.png";
@@ -17,13 +17,6 @@ export default function Studio() {
     console.log('Creating new project');
   };
 
-  const handleOpenProject = () => {
-    console.log('Opening existing project');
-  };
-
-  const handleSaveProject = () => {
-    console.log('Saving current project');
-  };
 
   const handleSettings = () => {
     console.log('Opening studio settings');
@@ -42,14 +35,6 @@ export default function Studio() {
             <Button onClick={handleNewProject} data-testid="button-new-project">
               <Plus className="w-4 h-4 mr-2" />
               New Project
-            </Button>
-            <Button variant="outline" onClick={handleOpenProject} data-testid="button-open-project">
-              <FolderOpen className="w-4 h-4 mr-2" />
-              Open
-            </Button>
-            <Button variant="outline" onClick={handleSaveProject} data-testid="button-save-project">
-              <Save className="w-4 h-4 mr-2" />
-              Save
             </Button>
             <Button variant="outline" size="icon" onClick={handleSettings} data-testid="button-settings">
               <Settings className="w-4 h-4" />
