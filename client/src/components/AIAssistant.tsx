@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Textarea } from "@/components/ui/textarea";
 import { Bot, Send, Sparkles, Lightbulb, Palette, Code2, Music, Video } from "lucide-react";
+import { replitAI } from "@/lib/replit-ai";
 
 interface Suggestion {
   id: number;
@@ -18,8 +19,9 @@ interface Suggestion {
 export default function AIAssistant() {
   const [message, setMessage] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  const [aiResponse, setAiResponse] = useState("");
+  const [currentSuggestions, setCurrentSuggestions] = useState<string[]>([]);
   
-  // TODO: Remove mock functionality 
   const suggestions: Suggestion[] = [
     {
       id: 1,
@@ -55,22 +57,70 @@ export default function AIAssistant() {
     }
   ];
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!message.trim()) return;
     
     setIsProcessing(true);
-    console.log('Sending message to AI:', message);
+    console.log('Sending message to Replit AI:', message);
     
-    // TODO: Remove mock functionality
-    setTimeout(() => {
-      setIsProcessing(false);
+    try {
+      const response = await replitAI.generateResponse(message, {
+        tool: "Creative Studio",
+        project: "AI Creative Platform", 
+        currentWork: "Building creative tools"
+      });
+      
+      setAiResponse(response.content);
+      if (response.suggestions) {
+        setCurrentSuggestions(response.suggestions);
+      }
       setMessage("");
-      console.log('AI response received');
-    }, 2000);
+      console.log('Replit AI response received:', response.content);
+    } catch (error) {
+      console.error('AI response error:', error);
+      setAiResponse("I'm having trouble connecting right now. Please try again!");
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const handleSuggestionClick = (suggestion: Suggestion) => {
     console.log('AI suggestion clicked:', suggestion.title);
+    setMessage(`Tell me more about: ${suggestion.title}`);
+  };
+
+  const handleAnalyzeProject = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await replitAI.generateCreativeSuggestions("Creative Studio", "Multi-tool platform");
+      setAiResponse(response.content);
+      if (response.suggestions) {
+        setCurrentSuggestions(response.suggestions);
+      }
+    } catch (error) {
+      console.error('Analysis error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handleGenerateIdeas = async () => {
+    setIsProcessing(true);
+    try {
+      const response = await replitAI.generateResponse("Generate creative ideas for my current project", {
+        tool: "Creative Studio",
+        project: "AI Creative Platform",
+        currentWork: "Building innovative tools"
+      });
+      setAiResponse(response.content);
+      if (response.suggestions) {
+        setCurrentSuggestions(response.suggestions);
+      }
+    } catch (error) {
+      console.error('Idea generation error:', error);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   const getTypeColor = (type: string) => {
@@ -100,15 +150,62 @@ export default function AIAssistant() {
       <CardContent className="flex-1 flex flex-col gap-4">
         {/* Quick Actions */}
         <div className="grid grid-cols-2 gap-2">
-          <Button variant="outline" size="sm" className="text-xs" data-testid="button-analyze-project">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs" 
+            onClick={handleAnalyzeProject}
+            disabled={isProcessing}
+            data-testid="button-analyze-project"
+          >
             <Sparkles className="w-3 h-3 mr-1" />
             Analyze Project
           </Button>
-          <Button variant="outline" size="sm" className="text-xs" data-testid="button-generate-ideas">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            className="text-xs"
+            onClick={handleGenerateIdeas}
+            disabled={isProcessing}
+            data-testid="button-generate-ideas"
+          >
             <Lightbulb className="w-3 h-3 mr-1" />
             Generate Ideas
           </Button>
         </div>
+
+        {/* AI Response Display */}
+        {aiResponse && (
+          <div className="p-3 bg-primary/5 rounded-lg border border-primary/10">
+            <div className="flex items-start gap-2 mb-2">
+              <div className="w-6 h-6 bg-primary rounded-md flex items-center justify-center flex-shrink-0">
+                <Bot className="w-3 h-3 text-primary-foreground" />
+              </div>
+              <h4 className="text-sm font-medium">Replit AI</h4>
+            </div>
+            <p className="text-sm text-foreground leading-relaxed mb-3">{aiResponse}</p>
+            
+            {/* Dynamic AI Suggestions */}
+            {currentSuggestions.length > 0 && (
+              <div className="space-y-2">
+                <h5 className="text-xs font-medium text-muted-foreground">AI Suggestions:</h5>
+                <div className="flex flex-wrap gap-1">
+                  {currentSuggestions.map((suggestion, index) => (
+                    <Badge 
+                      key={index}
+                      variant="outline" 
+                      className="text-xs cursor-pointer hover-elevate"
+                      onClick={() => setMessage(suggestion)}
+                      data-testid={`ai-suggestion-${index}`}
+                    >
+                      {suggestion}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* AI Suggestions */}
         <div className="flex-1 space-y-3 overflow-y-auto max-h-64">
@@ -154,7 +251,7 @@ export default function AIAssistant() {
           />
           <div className="flex justify-between items-center">
             <span className="text-xs text-muted-foreground">
-              {isProcessing ? "AI is thinking..." : "Press Enter to send"}
+              {isProcessing ? "Replit AI is thinking..." : "Press Enter to send"}
             </span>
             <Button 
               size="sm"
