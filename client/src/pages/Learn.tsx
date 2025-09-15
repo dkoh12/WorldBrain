@@ -43,7 +43,7 @@ export default function Learn() {
       rating: 4.8,
       enrolled: 1250,
       progress: 65,
-      thumbnail: "https://images.unsplash.com/photo-1567077219617-e24e7c2b48cd?w=300&h=200&fit=crop",
+      thumbnail: "/attached_assets/generated_images/3D_geometric_shapes_render_a3432705.png",
       instructor: "Sarah Chen",
       free: true
     },
