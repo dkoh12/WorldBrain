@@ -37,7 +37,7 @@ export default function Hero() {
           
           <h1 className="font-display text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6 leading-tight">
             The Ultimate
-            <span className="bg-gradient-to-r from-primary to-blue-400 bg-clip-text text-transparent block">
+            <span className="bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent block">
               Creative AI Studio
             </span>
           </h1>
