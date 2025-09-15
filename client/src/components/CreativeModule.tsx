@@ -34,6 +34,8 @@ export default function CreativeModule({
       navigate('/code');
     } else if (title.toLowerCase().includes('3d') || title.toLowerCase().includes('design')) {
       navigate('/3d');
+    } else if (title.toLowerCase().includes('music')) {
+      navigate('/music');
     } else {
       console.log(`${title} tool will be available soon!`);
     }
