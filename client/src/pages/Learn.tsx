@@ -43,7 +43,7 @@ export default function Learn() {
       rating: 4.8,
       enrolled: 1250,
       progress: 65,
-      thumbnail: "/api/placeholder/300/200",
+      thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop",
       instructor: "Sarah Chen",
       free: true
     },
@@ -58,7 +58,7 @@ export default function Learn() {
       rating: 4.9,
       enrolled: 890,
       progress: 30,
-      thumbnail: "/api/placeholder/300/200",
+      thumbnail: "https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=300&h=200&fit=crop",
       instructor: "Mike Rodriguez",
       free: false
     },
@@ -73,7 +73,7 @@ export default function Learn() {
       rating: 4.7,
       enrolled: 2100,
       progress: 0,
-      thumbnail: "/api/placeholder/300/200",
+      thumbnail: "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=200&fit=crop",
       instructor: "Emma Watson",
       free: true
     },
@@ -88,7 +88,7 @@ export default function Learn() {
       rating: 4.6,
       enrolled: 567,
       progress: 0,
-      thumbnail: "/api/placeholder/300/200",
+      thumbnail: "https://images.unsplash.com/photo-1555066931-4365d14bab8c?w=300&h=200&fit=crop",
       instructor: "David Kim",
       free: false
     }
