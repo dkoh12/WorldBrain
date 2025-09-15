@@ -100,7 +100,6 @@ export default function Studio() {
                   description="AI-powered 3D modeling workspace"
                   image={threeDImage}
                   features={["Parametric", "Real-time", "AI Materials"]}
-                  progress={75}
                   status="active"
                   aiSuggestions={5}
                 />
@@ -110,7 +109,6 @@ export default function Studio() {
                   description="Intelligent music composition"
                   image={musicImage}
                   features={["AI Compose", "Multi-track", "Virtual Instruments"]}
-                  progress={60}
                   status="processing"
                   aiSuggestions={3}
                 />
@@ -120,7 +118,6 @@ export default function Studio() {
                   description="Professional video editing suite"
                   image={videoImage}
                   features={["Auto-cut", "Color Grade", "Motion Graphics"]}
-                  progress={100}
                   status="complete"
                   aiSuggestions={2}
                 />
@@ -130,7 +127,6 @@ export default function Studio() {
                   description="AI-powered development environment"
                   image={codeImage}
                   features={["AI Copilot", "Multi-lang", "Live Collab"]}
-                  progress={30}
                   status="active"
                   aiSuggestions={8}
                 />

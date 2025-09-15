@@ -162,15 +162,6 @@ export default function CreativeModule({
       </CardHeader>
 
       <CardContent className="space-y-4">
-        {progress > 0 && (
-          <div className="space-y-2">
-            <div className="flex justify-between text-sm">
-              <span className="text-muted-foreground">Progress</span>
-              <span className="font-medium">{progress}%</span>
-            </div>
-            <Progress value={progress} className="h-2" data-testid={`progress-${title.toLowerCase().replace(' ', '-')}`} />
-          </div>
-        )}
 
         <div className="space-y-2">
           <h4 className="text-sm font-medium text-muted-foreground">Features</h4>
