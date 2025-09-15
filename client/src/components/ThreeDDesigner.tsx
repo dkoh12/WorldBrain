@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { replitAI } from "@/lib/replit-ai";
 import { projectManager } from "@/lib/project-manager";
+import { isPreviewMode } from "@/lib/utils/export-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import * as THREE from "three";
 import { 
   Save, 
@@ -76,6 +78,7 @@ export default function ThreeDDesigner() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiSuggestion, setAiSuggestion] = useState("");
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
   const [cameraControls, setCameraControls] = useState({
     autoRotate: false,
     zoom: 1
@@ -85,6 +88,13 @@ export default function ThreeDDesigner() {
   const [isInitialized, setIsInitialized] = useState(false);
 
   const selectedObject = scene3D.objects.find(obj => obj.id === selectedObjectId);
+
+  // Auto-open preview if in preview mode
+  useEffect(() => {
+    if (isPreviewMode()) {
+      setShowPreviewModal(true);
+    }
+  }, []);
 
   // Initialize Three.js scene
   useEffect(() => {

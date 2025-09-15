@@ -12,6 +12,7 @@ import { projectManager } from "@/lib/project-manager";
 import { ReplitAI } from "@/lib/replit-ai";
 import { useToast } from "@/hooks/use-toast";
 import { isPreviewMode } from "@/lib/utils/export-utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 interface AudioTrack {
   id: string;
@@ -66,6 +67,7 @@ export default function MusicStudio() {
   const [aiPrompt, setAiPrompt] = useState('');
   const [aiSuggestions, setAiSuggestions] = useState<string[]>([]);
   const [projectName, setProjectName] = useState('Untitled Song');
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
 
   const audioContextRef = useRef<AudioContext | null>(null);
   const oscillatorsRef = useRef<{ [key: string]: OscillatorNode[] }>({});
@@ -126,19 +128,22 @@ export default function MusicStudio() {
     initAudio();
     
     // Auto-play if preview mode is enabled
-    if (isPreviewMode() && audioContextRef.current?.state === 'suspended') {
-      // Resume audio context on user gesture (click anywhere)
-      const resumeAudio = () => {
-        if (audioContextRef.current?.state === 'suspended') {
-          audioContextRef.current.resume().then(() => {
-            startPlayback();
-            document.removeEventListener('click', resumeAudio);
-          });
-        }
-      };
-      document.addEventListener('click', resumeAudio);
-    } else if (isPreviewMode()) {
-      setTimeout(() => startPlayback(), 500);
+    if (isPreviewMode()) {
+      setShowPreviewModal(true);
+      if (audioContextRef.current?.state === 'suspended') {
+        // Resume audio context on user gesture (click anywhere)
+        const resumeAudio = () => {
+          if (audioContextRef.current?.state === 'suspended') {
+            audioContextRef.current.resume().then(() => {
+              startPlayback();
+              document.removeEventListener('click', resumeAudio);
+            });
+          }
+        };
+        document.addEventListener('click', resumeAudio);
+      } else {
+        setTimeout(() => startPlayback(), 500);
+      }
     }
     loadProjectData();
 
@@ -607,6 +612,42 @@ export default function MusicStudio() {
           </div>
         </div>
       </div>
+
+      {/* Preview Modal */}
+      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Music Preview</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="text-center">
+              <h3 className="text-lg font-semibold">{projectName}</h3>
+              <p className="text-muted-foreground">BPM: {bpm}</p>
+            </div>
+            <div className="flex justify-center gap-4">
+              <Button 
+                onClick={togglePlayback}
+                size="lg"
+                className="flex items-center gap-2"
+                data-testid="preview-play-button"
+              >
+                {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                {isPlaying ? 'Pause' : 'Play'} Preview
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => setShowPreviewModal(false)}
+                data-testid="preview-close-button"
+              >
+                Close Preview
+              </Button>
+            </div>
+            <div className="text-center text-sm text-muted-foreground">
+              {isPlaying ? 'Playing your composition...' : 'Click play to hear your music'}
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

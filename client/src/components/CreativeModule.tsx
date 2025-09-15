@@ -4,6 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { ExternalLink, Play, Download, Share2, Bot } from "lucide-react";
 import { useLocation } from "wouter";
+import { downloadHandlers } from "@/lib/download-handlers";
+import { shareHandlers, shareUrl } from "@/lib/share-handlers";
+import { useToast } from "@/hooks/use-toast";
 
 interface CreativeModuleProps {
   title: string;
@@ -25,6 +28,7 @@ export default function CreativeModule({
   aiSuggestions = 0
 }: CreativeModuleProps) {
   const [, navigate] = useLocation();
+  const { toast } = useToast();
   
   const handleOpen = () => {
     console.log(`Opening ${title} module`);
@@ -45,14 +49,66 @@ export default function CreativeModule({
 
   const handlePreview = () => {
     console.log(`Previewing ${title}`);
+    
+    // Navigate to the tool with preview parameter
+    if (title.toLowerCase().includes('code')) {
+      navigate('/code?preview=1');
+    } else if (title.toLowerCase().includes('3d') || title.toLowerCase().includes('design')) {
+      navigate('/3d?preview=1');
+    } else if (title.toLowerCase().includes('music')) {
+      navigate('/music?preview=1');
+    } else if (title.toLowerCase().includes('video')) {
+      navigate('/video?preview=1');
+    }
   };
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     console.log(`Downloading from ${title}`);
+    
+    try {
+      if (title.toLowerCase().includes('code')) {
+        await downloadHandlers.downloadCode();
+        toast({ title: "Download started", description: "Code files exported successfully" });
+      } else if (title.toLowerCase().includes('3d') || title.toLowerCase().includes('design')) {
+        await downloadHandlers.download3D();
+        toast({ title: "Download started", description: "3D scene exported successfully" });
+      } else if (title.toLowerCase().includes('music')) {
+        await downloadHandlers.downloadMusic();
+        toast({ title: "Download started", description: "Music project exported successfully" });
+      } else if (title.toLowerCase().includes('video')) {
+        await downloadHandlers.downloadVideo();
+        toast({ title: "Download started", description: "Video project exported successfully" });
+      }
+    } catch (error) {
+      console.error('Download error:', error);
+      toast({ title: "Download failed", description: "Unable to export project", variant: "destructive" });
+    }
   };
 
-  const handleShare = () => {
+  const handleShare = async () => {
     console.log(`Sharing ${title} project`);
+    
+    try {
+      let shareUrlResult = '';
+      
+      if (title.toLowerCase().includes('code')) {
+        shareUrlResult = await shareHandlers.shareCode();
+      } else if (title.toLowerCase().includes('3d') || title.toLowerCase().includes('design')) {
+        shareUrlResult = await shareHandlers.share3D();
+      } else if (title.toLowerCase().includes('music')) {
+        shareUrlResult = await shareHandlers.shareMusic();
+      } else if (title.toLowerCase().includes('video')) {
+        shareUrlResult = await shareHandlers.shareVideo();
+      }
+      
+      if (shareUrlResult) {
+        await shareUrl(shareUrlResult, `${title} Project`);
+        toast({ title: "Share link created", description: "Project shared successfully" });
+      }
+    } catch (error) {
+      console.error('Share error:', error);
+      toast({ title: "Share failed", description: "Unable to create share link", variant: "destructive" });
+    }
   };
 
   const getStatusColor = () => {
