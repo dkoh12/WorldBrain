@@ -32,6 +32,8 @@ export default function CreativeModule({
     // Navigate to specific creative tool
     if (title.toLowerCase().includes('code')) {
       navigate('/code');
+    } else if (title.toLowerCase().includes('3d') || title.toLowerCase().includes('design')) {
+      navigate('/3d');
     } else {
       console.log(`${title} tool will be available soon!`);
     }
