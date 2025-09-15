@@ -11,6 +11,7 @@ import { Play, Pause, Square, Save, Download, Activity, Music, Volume2, RotateCc
 import { projectManager } from "@/lib/project-manager";
 import { ReplitAI } from "@/lib/replit-ai";
 import { useToast } from "@/hooks/use-toast";
+import { isPreviewMode } from "@/lib/utils/export-utils";
 
 interface AudioTrack {
   id: string;
@@ -123,6 +124,22 @@ export default function MusicStudio() {
     };
 
     initAudio();
+    
+    // Auto-play if preview mode is enabled
+    if (isPreviewMode() && audioContextRef.current?.state === 'suspended') {
+      // Resume audio context on user gesture (click anywhere)
+      const resumeAudio = () => {
+        if (audioContextRef.current?.state === 'suspended') {
+          audioContextRef.current.resume().then(() => {
+            startPlayback();
+            document.removeEventListener('click', resumeAudio);
+          });
+        }
+      };
+      document.addEventListener('click', resumeAudio);
+    } else if (isPreviewMode()) {
+      setTimeout(() => startPlayback(), 500);
+    }
     loadProjectData();
 
     return () => {
