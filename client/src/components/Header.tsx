@@ -6,14 +6,16 @@ import { Bell, Search, Settings, User, Menu, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
 import { useLocation } from "wouter";
 import NotificationsDropdown from "./NotificationsDropdown";
+import SearchDropdown from "./SearchDropdown";
 
 export default function Header() {
   const [, navigate] = useLocation();
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
   const [unreadCount, setUnreadCount] = useState(3); // Start with initial count
 
   const handleSearch = () => {
-    console.log('Search clicked');
+    setShowSearch(!showSearch);
   };
 
   const handleNotifications = () => {
@@ -80,14 +82,21 @@ export default function Header() {
 
           {/* Actions */}
           <div className="flex items-center gap-2">
-            <Button 
-              variant="ghost" 
-              size="icon"
-              onClick={handleSearch}
-              data-testid="button-search"
-            >
-              <Search className="w-4 h-4" />
-            </Button>
+            <div className="relative">
+              <Button 
+                variant="ghost" 
+                size="icon"
+                onClick={handleSearch}
+                data-testid="button-search"
+              >
+                <Search className="w-4 h-4" />
+              </Button>
+              
+              <SearchDropdown 
+                isOpen={showSearch} 
+                onClose={() => setShowSearch(false)}
+              />
+            </div>
             
             <div className="relative">
               <Button 
