@@ -43,7 +43,7 @@ export default function Learn() {
       rating: 4.8,
       enrolled: 1250,
       progress: 65,
-      thumbnail: "https://images.unsplash.com/photo-1633356122544-f134324a6cee?w=300&h=200&fit=crop",
+      thumbnail: "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=300&h=200&fit=crop",
       instructor: "Sarah Chen",
       free: true
     },
