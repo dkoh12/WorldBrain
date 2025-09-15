@@ -6,6 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sparkles, Zap, Users, Globe, TrendingUp, Award } from "lucide-react";
+import { useLocation } from "wouter";
 
 // Import generated images
 import threeDImage from "@assets/generated_images/3D_Design_Interface_68eed078.png";
@@ -14,8 +15,11 @@ import videoImage from "@assets/generated_images/Video_Editing_Suite_0f983225.pn
 import codeImage from "@assets/generated_images/AI_Code_Editor_7a973b59.png";
 
 export default function Home() {
+  const [, navigate] = useLocation();
+
   const handleGetStarted = () => {
     console.log('Get started with creative tools');
+    navigate('/studio');
   };
 
   // TODO: Remove mock functionality

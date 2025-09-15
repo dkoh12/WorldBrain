@@ -3,8 +3,11 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Bell, Search, Settings, User, Menu, Sparkles } from "lucide-react";
 import { ThemeToggle } from "./ThemeToggle";
+import { useLocation } from "wouter";
 
 export default function Header() {
+  const [, navigate] = useLocation();
+
   const handleSearch = () => {
     console.log('Search clicked');
   };
@@ -19,6 +22,10 @@ export default function Header() {
 
   const handleMenu = () => {
     console.log('Menu clicked');
+  };
+
+  const handleNavigate = (path: string) => {
+    navigate(path);
   };
 
   return (
@@ -49,16 +56,16 @@ export default function Header() {
 
           {/* Navigation */}
           <nav className="hidden md:flex items-center gap-6">
-            <Button variant="ghost" className="text-sm font-medium" data-testid="button-nav-studio">
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleNavigate('/studio')} data-testid="button-nav-studio">
               Studio
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" data-testid="button-nav-projects">
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleNavigate('/projects')} data-testid="button-nav-projects">
               Projects
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" data-testid="button-nav-gallery">
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleNavigate('/gallery')} data-testid="button-nav-gallery">
               Gallery
             </Button>
-            <Button variant="ghost" className="text-sm font-medium" data-testid="button-nav-learn">
+            <Button variant="ghost" className="text-sm font-medium" onClick={() => handleNavigate('/learn')} data-testid="button-nav-learn">
               Learn
             </Button>
           </nav>
