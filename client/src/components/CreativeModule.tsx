@@ -1,0 +1,150 @@
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import { ExternalLink, Play, Download, Share2, Bot } from "lucide-react";
+
+interface CreativeModuleProps {
+  title: string;
+  description: string;
+  image: string;
+  features: string[];
+  progress?: number;
+  status?: 'active' | 'processing' | 'complete';
+  aiSuggestions?: number;
+}
+
+export default function CreativeModule({ 
+  title, 
+  description, 
+  image, 
+  features, 
+  progress = 0,
+  status = 'active',
+  aiSuggestions = 0
+}: CreativeModuleProps) {
+  
+  const handleOpen = () => {
+    console.log(`Opening ${title} module`);
+  };
+
+  const handlePreview = () => {
+    console.log(`Previewing ${title}`);
+  };
+
+  const handleDownload = () => {
+    console.log(`Downloading from ${title}`);
+  };
+
+  const handleShare = () => {
+    console.log(`Sharing ${title} project`);
+  };
+
+  const getStatusColor = () => {
+    switch(status) {
+      case 'processing': return 'bg-yellow-500';
+      case 'complete': return 'bg-green-500';
+      default: return 'bg-primary';
+    }
+  };
+
+  return (
+    <Card className="hover-elevate transition-all duration-300 overflow-hidden">
+      <div className="relative">
+        <div 
+          className="h-48 bg-cover bg-center bg-gray-100 dark:bg-gray-800"
+          style={{ backgroundImage: `url(${image})` }}
+        />
+        <div className="absolute top-3 right-3 flex gap-2">
+          <Badge variant="secondary" className="bg-background/80 backdrop-blur-sm" data-testid={`badge-status-${title.toLowerCase().replace(' ', '-')}`}>
+            <div className={`w-2 h-2 rounded-full mr-1 ${getStatusColor()}`} />
+            {status}
+          </Badge>
+          {aiSuggestions > 0 && (
+            <Badge className="bg-primary/80 backdrop-blur-sm text-primary-foreground" data-testid={`badge-ai-suggestions-${title.toLowerCase().replace(' ', '-')}`}>
+              <Bot className="w-3 h-3 mr-1" />
+              {aiSuggestions} AI
+            </Badge>
+          )}
+        </div>
+      </div>
+
+      <CardHeader className="pb-3">
+        <div className="flex items-start justify-between">
+          <div>
+            <CardTitle className="text-lg font-display" data-testid={`title-${title.toLowerCase().replace(' ', '-')}`}>
+              {title}
+            </CardTitle>
+            <p className="text-sm text-muted-foreground mt-1" data-testid={`description-${title.toLowerCase().replace(' ', '-')}`}>
+              {description}
+            </p>
+          </div>
+          <Button 
+            size="icon" 
+            variant="ghost"
+            onClick={handleOpen}
+            data-testid={`button-open-${title.toLowerCase().replace(' ', '-')}`}
+          >
+            <ExternalLink className="w-4 h-4" />
+          </Button>
+        </div>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {progress > 0 && (
+          <div className="space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Progress</span>
+              <span className="font-medium">{progress}%</span>
+            </div>
+            <Progress value={progress} className="h-2" data-testid={`progress-${title.toLowerCase().replace(' ', '-')}`} />
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <h4 className="text-sm font-medium text-muted-foreground">Features</h4>
+          <div className="flex flex-wrap gap-1">
+            {features.map((feature, index) => (
+              <Badge 
+                key={index} 
+                variant="outline" 
+                className="text-xs"
+                data-testid={`badge-feature-${feature.toLowerCase().replace(' ', '-')}`}
+              >
+                {feature}
+              </Badge>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <Button 
+            size="sm" 
+            className="flex-1"
+            onClick={handlePreview}
+            data-testid={`button-preview-${title.toLowerCase().replace(' ', '-')}`}
+          >
+            <Play className="w-3 h-3 mr-1" />
+            Preview
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleDownload}
+            data-testid={`button-download-${title.toLowerCase().replace(' ', '-')}`}
+          >
+            <Download className="w-3 h-3" />
+          </Button>
+          <Button 
+            size="sm" 
+            variant="outline"
+            onClick={handleShare}
+            data-testid={`button-share-${title.toLowerCase().replace(' ', '-')}`}
+          >
+            <Share2 className="w-3 h-3" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
