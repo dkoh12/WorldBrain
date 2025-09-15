@@ -44,14 +44,18 @@ export default function Header() {
               <Menu className="w-5 h-5" />
             </Button>
             
-            <div className="flex items-center gap-2">
+            <button 
+              className="flex items-center gap-2 hover-elevate rounded-lg p-2 -m-2 transition-colors"
+              onClick={() => handleNavigate('/')}
+              data-testid="button-logo-home"
+            >
               <div className="w-8 h-8 bg-primary rounded-md flex items-center justify-center">
                 <Sparkles className="w-5 h-5 text-primary-foreground" />
               </div>
               <h1 className="font-display text-xl font-bold bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
                 CreativeAI
               </h1>
-            </div>
+            </button>
           </div>
 
           {/* Navigation */}
