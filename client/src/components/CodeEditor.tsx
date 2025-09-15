@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Editor } from "@monaco-editor/react";
 import { replitAI } from "@/lib/replit-ai";
@@ -23,7 +24,10 @@ import {
   Sparkles,
   FileText,
   FolderOpen,
-  Plus
+  Plus,
+  ChevronLeft,
+  ChevronRight,
+  AlertTriangle
 } from "lucide-react";
 
 interface CodeFile {
@@ -33,12 +37,136 @@ interface CodeFile {
   content: string;
 }
 
+interface LanguagePreset {
+  extension: string;
+  template: string;
+  defaultName: string;
+}
+
+const languagePresets: Record<string, LanguagePreset> = {
+  javascript: {
+    extension: 'js',
+    template: `// Welcome to AI-Powered Code Editor
+// Ask AI for help, generate functions, or debug your code!
+
+function createAIAssistant() {
+  console.log("Building amazing things with AI!");
+  
+  // TODO: Add your creative code here
+  return "Ready to create!";
+}
+
+createAIAssistant();`,
+    defaultName: 'main'
+  },
+  typescript: {
+    extension: 'ts',
+    template: `// Welcome to AI-Powered TypeScript Editor
+// Strongly typed code with AI assistance!
+
+interface AIAssistant {
+  name: string;
+  capabilities: string[];
+}
+
+function createAIAssistant(): AIAssistant {
+  console.log("Building amazing things with TypeScript!");
+  
+  return {
+    name: "AI Creative Assistant",
+    capabilities: ["code generation", "debugging", "optimization"]
+  };
+}
+
+const assistant = createAIAssistant();
+console.log(assistant);`,
+    defaultName: 'main'
+  },
+  python: {
+    extension: 'py',
+    template: `# Welcome to AI-Powered Python Editor
+# Build amazing things with Python and AI!
+
+def create_ai_assistant():
+    print("Building amazing things with Python!")
+    
+    # TODO: Add your creative code here
+    return "Ready to create!"
+
+if __name__ == "__main__":
+    result = create_ai_assistant()
+    print(result)`,
+    defaultName: 'main'
+  },
+  html: {
+    extension: 'html',
+    template: `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Creative Studio</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Welcome to AI Creative Studio</h1>
+        <p>Build amazing web experiences with AI assistance!</p>
+    </div>
+</body>
+</html>`,
+    defaultName: 'index'
+  },
+  css: {
+    extension: 'css',
+    template: `/* AI-Generated Styles */
+body {
+  font-family: 'Inter', sans-serif;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: #333;
+  margin: 0;
+  padding: 0;
+}
+
+.ai-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.ai-card {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  border-radius: 12px;
+  padding: 2rem;
+  margin: 1rem 0;
+}`,
+    defaultName: 'styles'
+  }
+};
+
 export default function CodeEditor() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState("");
   const [showTerminal, setShowTerminal] = useState(false);
   const [isCodeRunning, setIsCodeRunning] = useState(false);
   const [htmlOutput, setHtmlOutput] = useState<string>("");
+  const [showFilesPanel, setShowFilesPanel] = useState(true);
+  const [showAssistantPanel, setShowAssistantPanel] = useState(true);
+  const [showLanguageConfirmation, setShowLanguageConfirmation] = useState(false);
+  const [pendingLanguageChange, setPendingLanguageChange] = useState<{ newLanguage: string; currentLanguage: string } | null>(null);
   const editorRef = useRef<any>(null);
   const jsRunner = useRef<JavaScriptRunner>(new JavaScriptRunner());
   const pythonRunner = useRef<PythonRunner>(new PythonRunner());
@@ -330,11 +458,74 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
     }
   };
 
+  const handleLanguageChange = (newLanguage: string) => {
+    if (!activeFileData) return;
+    
+    const currentLanguage = activeFileData.language;
+    
+    // Check if this is a significant language change that might warrant conversion
+    const significantChange = (
+      (currentLanguage === 'javascript' && newLanguage === 'python') ||
+      (currentLanguage === 'python' && newLanguage === 'javascript') ||
+      (currentLanguage === 'typescript' && newLanguage === 'python') ||
+      (currentLanguage === 'python' && newLanguage === 'typescript')
+    );
+    
+    if (significantChange && activeFileData.content.trim().length > 50) {
+      // Show confirmation dialog for significant changes
+      setPendingLanguageChange({ newLanguage, currentLanguage });
+      setShowLanguageConfirmation(true);
+    } else {
+      // Apply language change immediately
+      applyLanguageChange(newLanguage);
+    }
+  };
+
+  const applyLanguageChange = (newLanguage: string) => {
+    if (!activeFileData) return;
+    
+    const preset = languagePresets[newLanguage];
+    if (!preset) return;
+    
+    // Create new filename with proper extension
+    const baseName = activeFileData.name.split('.')[0];
+    const isDefaultName = Object.values(languagePresets).some(p => 
+      p.defaultName === baseName || baseName === 'untitled' || baseName === 'main'
+    );
+    
+    const newFileName = isDefaultName 
+      ? `${preset.defaultName}.${preset.extension}`
+      : `${baseName}.${preset.extension}`;
+    
+    const updatedFiles = files.map(file => 
+      file.id === activeFile
+        ? { 
+            ...file, 
+            name: newFileName,
+            language: newLanguage,
+            content: preset.template
+          }
+        : file
+    );
+    
+    setFiles(updatedFiles);
+    
+    // Save to current project
+    const currentProjectId = projectManager.getCurrentProjectId();
+    if (currentProjectId) {
+      projectManager.updateProjectToolData(currentProjectId, 'code', updatedFiles);
+    }
+    
+    // Save to localStorage for backward compatibility
+    localStorage.setItem('codeEditor_files', JSON.stringify(updatedFiles));
+  };
+
   const handleCreateNewFile = () => {
     const newId = `file_${Date.now()}`;
+    const preset = languagePresets.javascript;
     const newFile: CodeFile = {
       id: newId,
-      name: "untitled.js",
+      name: `untitled.${preset.extension}`,
       language: "javascript", 
       content: "// New file created with AI assistance\n\n"
     };
@@ -348,6 +539,22 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
     if (currentProjectId) {
       projectManager.updateProjectToolData(currentProjectId, 'code', updatedFiles);
     }
+  };
+  
+  const handleToggleFilesPanel = () => {
+    setShowFilesPanel(!showFilesPanel);
+    // Trigger editor layout after a short delay to ensure proper resizing
+    setTimeout(() => {
+      editorRef.current?.layout();
+    }, 300);
+  };
+  
+  const handleToggleAssistantPanel = () => {
+    setShowAssistantPanel(!showAssistantPanel);
+    // Trigger editor layout after a short delay to ensure proper resizing
+    setTimeout(() => {
+      editorRef.current?.layout();
+    }, 300);
   };
 
   const handleToggleTerminal = () => {
@@ -398,32 +605,48 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
 
       <div className="flex-1 flex">
         {/* File Explorer */}
-        <div className="w-64 border-r bg-muted/30">
-          <div className="p-3 border-b bg-card">
-            <div className="flex items-center justify-between">
-              <h3 className="font-medium text-sm">Files</h3>
-              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCreateNewFile} data-testid="button-new-file">
-                <Plus className="w-3 h-3" />
-              </Button>
+        {showFilesPanel && (
+          <div className="w-64 border-r bg-muted/30">
+            <div className="p-3 border-b bg-card">
+              <div className="flex items-center justify-between">
+                <h3 className="font-medium text-sm">Files</h3>
+                <div className="flex items-center gap-1">
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleCreateNewFile} data-testid="button-new-file">
+                    <Plus className="w-3 h-3" />
+                  </Button>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleToggleFilesPanel} data-testid="button-toggle-files">
+                    <ChevronLeft className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          
+            <div className="p-2">
+              {files.map((file) => (
+                <div
+                  key={file.id}
+                  className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover-elevate text-sm ${
+                    activeFile === file.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                  onClick={() => setActiveFile(file.id)}
+                  data-testid={`file-${file.id}`}
+                >
+                  <span>{getLanguageIcon(file.language)}</span>
+                  <span className="truncate">{file.name}</span>
+                </div>
+              ))}
             </div>
           </div>
-          
-          <div className="p-2">
-            {files.map((file) => (
-              <div
-                key={file.id}
-                className={`flex items-center gap-2 px-2 py-1.5 rounded cursor-pointer hover-elevate text-sm ${
-                  activeFile === file.id ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground'
-                }`}
-                onClick={() => setActiveFile(file.id)}
-                data-testid={`file-${file.id}`}
-              >
-                <span>{getLanguageIcon(file.language)}</span>
-                <span className="truncate">{file.name}</span>
-              </div>
-            ))}
+        )}
+        
+        {/* Toggle button when files panel is hidden */}
+        {!showFilesPanel && (
+          <div className="border-r bg-muted/30 flex items-start pt-3">
+            <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleToggleFilesPanel} data-testid="button-show-files">
+              <ChevronRight className="w-3 h-3" />
+            </Button>
           </div>
-        </div>
+        )}
 
         {/* Editor and AI Panel */}
         <div className="flex-1 flex">
@@ -436,16 +659,7 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                   <span className="font-medium">{activeFileData?.name}</span>
                 </div>
                 
-                <Select value={activeFileData?.language} onValueChange={(value) => {
-                  if (!activeFileData) return;
-                  setFiles(prevFiles => 
-                    prevFiles.map(file => 
-                      file.id === activeFile 
-                        ? { ...file, language: value }
-                        : file
-                    )
-                  );
-                }}>
+                <Select value={activeFileData?.language} onValueChange={handleLanguageChange}>
                   <SelectTrigger className="w-32">
                     <SelectValue />
                   </SelectTrigger>
@@ -484,13 +698,19 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
           </div>
 
           {/* AI Assistant Panel */}
-          <div className="w-80 border-l bg-muted/30 flex flex-col">
-            <div className="p-3 border-b bg-card">
-              <h3 className="font-medium flex items-center gap-2">
-                <Sparkles className="w-4 h-4 text-primary" />
-                AI Assistant
-              </h3>
-            </div>
+          {showAssistantPanel && (
+            <div className="w-80 border-l bg-muted/30 flex flex-col">
+              <div className="p-3 border-b bg-card">
+                <div className="flex items-center justify-between">
+                  <h3 className="font-medium flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-primary" />
+                    AI Assistant
+                  </h3>
+                  <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleToggleAssistantPanel} data-testid="button-toggle-assistant">
+                    <ChevronRight className="w-3 h-3" />
+                  </Button>
+                </div>
+              </div>
 
             <div className="flex-1 p-3 space-y-3">
               {/* AI Action Buttons */}
@@ -588,9 +808,68 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                 </div>
               </div>
             </div>
-          </div>
+            </div>
+          )}
+          
+          {/* Toggle button when assistant panel is hidden */}
+          {!showAssistantPanel && (
+            <div className="border-l bg-muted/30 flex items-start pt-3">
+              <Button size="icon" variant="ghost" className="h-6 w-6" onClick={handleToggleAssistantPanel} data-testid="button-show-assistant">
+                <ChevronLeft className="w-3 h-3" />
+              </Button>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Language Change Confirmation Dialog */}
+      <AlertDialog open={showLanguageConfirmation} onOpenChange={setShowLanguageConfirmation}>
+        <AlertDialogContent data-testid="dialog-language-change">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="w-5 h-5 text-amber-500" />
+              Convert Project Language?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You're switching from {pendingLanguageChange?.currentLanguage} to {pendingLanguageChange?.newLanguage}. 
+              This will replace your current file content with a new template for the selected language.
+              
+              <div className="mt-3 p-3 bg-muted/50 rounded-lg text-sm">
+                <strong>What will happen:</strong>
+                <ul className="list-disc list-inside mt-1 space-y-1">
+                  <li>File extension will be updated</li>
+                  <li>Current content will be replaced with {pendingLanguageChange?.newLanguage} template</li>
+                  <li>Your previous code will be lost</li>
+                </ul>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel 
+              onClick={() => {
+                setShowLanguageConfirmation(false);
+                setPendingLanguageChange(null);
+              }}
+              data-testid="button-cancel-language-change"
+            >
+              Keep Current Language
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (pendingLanguageChange) {
+                  applyLanguageChange(pendingLanguageChange.newLanguage);
+                }
+                setShowLanguageConfirmation(false);
+                setPendingLanguageChange(null);
+              }}
+              className="bg-primary hover:bg-primary/90"
+              data-testid="button-confirm-language-change"
+            >
+              Convert to {pendingLanguageChange?.newLanguage}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Terminal Panel */}
       <TerminalPanel

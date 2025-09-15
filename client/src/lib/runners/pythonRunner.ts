@@ -20,42 +20,28 @@ export class PythonRunner {
       // Create a worker with Pyodide
       const workerCode = `
         let pyodide = null;
-        let isLoading = false;
+        let loading = false;
         
-        async function loadPyodide() {
-          if (pyodide || isLoading) return pyodide;
+        async function initPyodide() {
+          if (pyodide || loading) return pyodide;
           
-          isLoading = true;
+          loading = true;
           self.postMessage({ type: 'info', data: 'Downloading Python runtime...' });
           
           try {
             // Load Pyodide from CDN
             self.importScripts('https://cdn.jsdelivr.net/pyodide/v0.24.1/full/pyodide.js');
-            pyodide = await loadPyodide();
+            pyodide = await self.loadPyodide({ 
+              indexURL: 'https://cdn.jsdelivr.net/pyodide/v0.24.1/full/' 
+            });
             
-            // Redirect stdout and stderr
-            pyodide.runPython(\`
-import sys
-from io import StringIO
-
-class TerminalCapture:
-    def __init__(self, stream_type):
-        self.stream_type = stream_type
-        self.content = []
-    
-    def write(self, text):
-        if text and text.strip():
-            # Send to JS via postMessage
-            import js
-            js.postMessage({'type': self.stream_type, 'data': text.rstrip()})
-    
-    def flush(self):
-        pass
-
-# Replace stdout and stderr
-sys.stdout = TerminalCapture('stdout')
-sys.stderr = TerminalCapture('stderr')
-            \`);
+            // Redirect stdout and stderr using Pyodide's API
+            pyodide.setStdout({ 
+              batched: (s) => self.postMessage({ type: 'stdout', data: s }) 
+            });
+            pyodide.setStderr({ 
+              batched: (s) => self.postMessage({ type: 'stderr', data: s }) 
+            });
             
             self.postMessage({ type: 'info', data: 'Python environment ready!' });
             return pyodide;
@@ -66,7 +52,7 @@ sys.stderr = TerminalCapture('stderr')
             });
             throw error;
           } finally {
-            isLoading = false;
+            loading = false;
           }
         }
         
@@ -75,11 +61,11 @@ sys.stderr = TerminalCapture('stderr')
           
           try {
             if (!pyodide) {
-              await loadPyodide();
+              await initPyodide();
             }
             
             // Execute the user code
-            pyodide.runPython(code);
+            await pyodide.runPythonAsync(code);
             self.postMessage({ type: 'completed', exitCode: 0 });
             
           } catch (error) {
