@@ -152,8 +152,25 @@ body {
   };
 
   const handleRunCode = () => {
-    console.log('Running code:', activeFileData?.content);
-    // TODO: Implement actual code execution (sandbox environment)
+    if (!activeFileData) return;
+    
+    const webLanguages = ['javascript', 'typescript', 'html', 'css'];
+    
+    // For web languages, show the preview modal to run the code
+    if (webLanguages.includes(activeFileData.language) || 
+        files.some(f => webLanguages.includes(f.language))) {
+      setShowPreviewModal(true);
+    } else {
+      // For other languages, show an informative message
+      setAiSuggestion(`Code execution for ${activeFileData.language} is not yet supported in the browser environment. 
+      
+The AI Code Editor currently supports running:
+• JavaScript/TypeScript
+• HTML 
+• CSS
+
+Try creating a web-based version of your ${activeFileData.language} code, or use the AI Assistant to help convert it to JavaScript!`);
+    }
   };
 
   const handleSaveProject = () => {
