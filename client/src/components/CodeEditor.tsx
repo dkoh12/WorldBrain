@@ -7,8 +7,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Editor } from "@monaco-editor/react";
 import { replitAI } from "@/lib/replit-ai";
-import { isPreviewMode, buildHtmlRunner } from "@/lib/utils/export-utils";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { buildHtmlRunner } from "@/lib/utils/export-utils";
+import TerminalPanel from "@/components/TerminalPanel";
+import { JavaScriptRunner } from "@/lib/runners/jsRunner";
+import { PythonRunner } from "@/lib/runners/pythonRunner";
 import { 
   Play, 
   Save, 
@@ -34,8 +36,12 @@ interface CodeFile {
 export default function CodeEditor() {
   const [isAIProcessing, setIsAIProcessing] = useState(false);
   const [aiSuggestion, setAiSuggestion] = useState("");
-  const [showPreviewModal, setShowPreviewModal] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
+  const [isCodeRunning, setIsCodeRunning] = useState(false);
+  const [htmlOutput, setHtmlOutput] = useState<string>("");
   const editorRef = useRef<any>(null);
+  const jsRunner = useRef<JavaScriptRunner>(new JavaScriptRunner());
+  const pythonRunner = useRef<PythonRunner>(new PythonRunner());
   
   // Load files from current project or use defaults
   const [files, setFiles] = useState<CodeFile[]>(() => {
@@ -97,11 +103,16 @@ body {
     return files.length > 0 ? files[0].id : "main";
   });
 
-  // Auto-open preview if in preview mode
+  // Monitor running status
   useEffect(() => {
-    if (isPreviewMode()) {
-      setShowPreviewModal(true);
-    }
+    const checkRunningStatus = () => {
+      const jsRunning = jsRunner.current.isCodeRunning();
+      const pythonRunning = pythonRunner.current.isCodeRunning();
+      setIsCodeRunning(jsRunning || pythonRunning);
+    };
+
+    const interval = setInterval(checkRunningStatus, 100);
+    return () => clearInterval(interval);
   }, []);
 
   const activeFileData = files.find(f => f.id === activeFile);
@@ -151,26 +162,78 @@ body {
     }, 1000);
   };
 
-  const handleRunCode = () => {
+  const handleRunCode = async () => {
     if (!activeFileData) return;
     
-    const webLanguages = ['javascript', 'typescript', 'html', 'css'];
-    
-    // For web languages, show the preview modal to run the code
-    if (webLanguages.includes(activeFileData.language) || 
-        files.some(f => webLanguages.includes(f.language))) {
-      setShowPreviewModal(true);
-    } else {
-      // For other languages, show an informative message
-      setAiSuggestion(`Code execution for ${activeFileData.language} is not yet supported in the browser environment. 
-      
-The AI Code Editor currently supports running:
-• JavaScript/TypeScript
-• HTML 
-• CSS
-
-Try creating a web-based version of your ${activeFileData.language} code, or use the AI Assistant to help convert it to JavaScript!`);
+    // Show terminal if not visible
+    if (!showTerminal) {
+      setShowTerminal(true);
     }
+    
+    const language = activeFileData.language.toLowerCase();
+    
+    try {
+      // Clear HTML output
+      setHtmlOutput("");
+      
+      switch (language) {
+        case 'javascript':
+        case 'js':
+          await jsRunner.current.runCode(activeFileData.content);
+          break;
+          
+        case 'typescript':
+        case 'ts':
+          // For TypeScript, we'll transpile to JavaScript (simplified approach)
+          setAiSuggestion("TypeScript execution: Converting to JavaScript...");
+          // Remove type annotations (basic approach)
+          const jsCode = activeFileData.content.replace(/:\s*\w+/g, '');
+          await jsRunner.current.runCode(jsCode);
+          break;
+          
+        case 'python':
+        case 'py':
+          await pythonRunner.current.runCode(activeFileData.content);
+          break;
+          
+        case 'html':
+        case 'css':
+          // For HTML/CSS, generate output for the webview
+          setHtmlOutput(buildHtmlRunner(files.map(f => ({
+            name: f.name,
+            content: f.content,
+            language: f.language
+          }))));
+          if ((window as any).writeToTerminal) {
+            (window as any).writeToTerminal('$ Rendering HTML/CSS output...', 'info');
+            (window as any).writeToTerminal('Output rendered in Output tab', 'stdout');
+            (window as any).setTerminalExitCode(0, 100);
+            (window as any).writePrompt();
+          }
+          break;
+          
+        default:
+          setAiSuggestion(`Code execution for ${language} is not yet supported in the browser environment. 
+          
+The AI Code Editor currently supports running:
+• JavaScript/TypeScript (transpiled)
+• Python (via WebAssembly)
+• HTML/CSS (rendered output)
+
+Try creating a web-based version of your ${language} code, or use the AI Assistant to help convert it to a supported language!`);
+          break;
+      }
+    } catch (error) {
+      console.error('Code execution error:', error);
+      if ((window as any).writeToTerminal) {
+        (window as any).writeToTerminal(`Execution failed: ${error}`, 'stderr');
+      }
+    }
+  };
+
+  const handleStopCode = () => {
+    jsRunner.current.stop();
+    pythonRunner.current.stop();
   };
 
   const handleSaveProject = () => {
@@ -287,16 +350,8 @@ Try creating a web-based version of your ${activeFileData.language} code, or use
     }
   };
 
-  const handlePreview = () => {
-    setShowPreviewModal(true);
-  };
-
-  const generatePreviewHtml = () => {
-    return buildHtmlRunner(files.map(f => ({
-      name: f.name,
-      content: f.content,
-      language: f.language
-    })));
+  const handleToggleTerminal = () => {
+    setShowTerminal(!showTerminal);
   };
 
   const getLanguageIcon = (language: string) => {
@@ -537,23 +592,15 @@ Try creating a web-based version of your ${activeFileData.language} code, or use
         </div>
       </div>
 
-      {/* Preview Modal */}
-      <Dialog open={showPreviewModal} onOpenChange={setShowPreviewModal}>
-        <DialogContent className="max-w-4xl max-h-[80vh]">
-          <DialogHeader>
-            <DialogTitle>Code Preview</DialogTitle>
-          </DialogHeader>
-          <div className="flex-1 border rounded-md overflow-hidden">
-            <iframe
-              srcDoc={generatePreviewHtml()}
-              sandbox="allow-scripts allow-same-origin"
-              className="w-full h-96 border-0"
-              title="Code Preview"
-              data-testid="code-preview-iframe"
-            />
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Terminal Panel */}
+      <TerminalPanel
+        isVisible={showTerminal}
+        onToggle={handleToggleTerminal}
+        isRunning={isCodeRunning}
+        onRun={handleRunCode}
+        onStop={handleStopCode}
+        htmlContent={htmlOutput}
+      />
     </div>
   );
 }
