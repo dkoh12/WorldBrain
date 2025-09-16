@@ -129,10 +129,17 @@ export default function Projects() {
         description: "Continue your creative work!",
       });
       
-      // Navigate based on primary tool or to studio
+      // Navigate based on the project's tools
       if (project.tools.includes('code')) {
         navigate('/code');
+      } else if (project.tools.includes('video')) {
+        navigate('/video');
+      } else if (project.tools.includes('3d')) {
+        navigate('/3d');
+      } else if (project.tools.includes('music')) {
+        navigate('/music');
       } else {
+        // Fallback to studio if no specific tools or multiple tools
         navigate('/studio');
       }
     }
