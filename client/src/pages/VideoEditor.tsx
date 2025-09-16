@@ -784,6 +784,17 @@ export default function VideoEditor() {
     }
   };
 
+  const getTrackName = (layerIndex: number): string => {
+    const trackNames = {
+      0: 'Video Track',
+      1: 'Text Track', 
+      2: 'Image Track',
+      3: 'Audio Track'
+    };
+    
+    return trackNames[layerIndex as keyof typeof trackNames] || `Track ${layerIndex}`;
+  };
+
   const handleAIGeneration = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -1027,7 +1038,7 @@ export default function VideoEditor() {
                             {/* Track label */}
                             <div className="flex items-center mb-1">
                               <div className="w-16 text-xs text-muted-foreground font-medium">
-                                Track {layerIndex}
+                                {getTrackName(layerIndex)}
                               </div>
                             </div>
                             
