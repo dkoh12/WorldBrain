@@ -14,7 +14,7 @@ import {
   FastForward, Rewind, SkipBack, SkipForward
 } from "lucide-react";
 import { projectManager } from "@/lib/project-manager";
-import { ReplitAI } from "@/lib/replit-ai";
+import { replitAI } from "@/lib/replit-ai";
 import { useToast } from "@/hooks/use-toast";
 import { isPreviewMode } from "@/lib/utils/export-utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -146,7 +146,6 @@ export default function VideoEditor() {
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { toast } = useToast();
-  const replitAI = new ReplitAI();
 
   // Initialize canvas and load project data
   useEffect(() => {
@@ -886,6 +885,7 @@ export default function VideoEditor() {
         project: projectName, 
         currentWork: 'video editing' 
       });
+      
       setAiSuggestions(response.suggestions || []);
       
       toast({
