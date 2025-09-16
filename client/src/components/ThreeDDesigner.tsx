@@ -89,6 +89,8 @@ export default function ThreeDDesigner() {
   
   const [webglError, setWebglError] = useState<string | null>(null);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isDraggingObject, setIsDraggingObject] = useState<string | null>(null);
+  const [dragStartPosition, setDragStartPosition] = useState<[number, number, number] | null>(null);
 
   const selectedObject = scene3D.objects.find(obj => obj.id === selectedObjectId);
 
@@ -208,13 +210,67 @@ export default function ThreeDDesigner() {
       // Mouse controls for camera
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
+      let dragStartMouse = { x: 0, y: 0 };
 
       const handleMouseDown = (event: MouseEvent) => {
+        const rect = renderer.domElement.getBoundingClientRect();
+        mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+        // Check if Ctrl key is held and if we're clicking on an object
+        if (event.ctrlKey || event.metaKey) {
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(scene.children, true);
+          
+          const validIntersects = intersects.filter(intersect => 
+            !intersect.object.userData.isSelectionWireframe && 
+            intersect.object.userData.isSceneObject
+          );
+
+          if (validIntersects.length > 0) {
+            const clickedObjectId = validIntersects[0].object.userData.objectId;
+            if (clickedObjectId) {
+              // Start object dragging
+              setIsDraggingObject(clickedObjectId);
+              setSelectedObjectId(clickedObjectId);
+              
+              // Store the object's current position as drag start position
+              const objToMove = scene3D.objects.find(obj => obj.id === clickedObjectId);
+              if (objToMove) {
+                setDragStartPosition([...objToMove.position]);
+              }
+              
+              dragStartMouse = { x: event.clientX, y: event.clientY };
+              return; // Don't start camera dragging
+            }
+          }
+        }
+
+        // Normal camera dragging (when Ctrl is not held or no object clicked)
         isDragging = true;
         previousMousePosition = { x: event.clientX, y: event.clientY };
       };
 
       const handleMouseMove = (event: MouseEvent) => {
+        if (isDraggingObject) {
+          // Handle object dragging - calculate total movement from drag start
+          if (dragStartPosition) {
+            const movementScale = 0.02; // Adjust sensitivity
+            const totalDeltaX = event.clientX - dragStartMouse.x;
+            const totalDeltaY = event.clientY - dragStartMouse.y;
+            
+            const newPosition: [number, number, number] = [
+              dragStartPosition[0] + totalDeltaX * movementScale,
+              dragStartPosition[1] - totalDeltaY * movementScale, // Negative Y for intuitive up/down movement
+              dragStartPosition[2]
+            ];
+
+            updateObject(isDraggingObject, { position: newPosition });
+          }
+
+          return;
+        }
+
         if (!isDragging) return;
 
         const deltaX = event.clientX - previousMousePosition.x;
@@ -235,6 +291,8 @@ export default function ThreeDDesigner() {
 
       const handleMouseUp = () => {
         isDragging = false;
+        setIsDraggingObject(null);
+        setDragStartPosition(null);
       };
 
       const handleWheel = (event: WheelEvent) => {
@@ -1448,7 +1506,7 @@ export default function ThreeDDesigner() {
         ) : (
           <div 
             ref={mountRef} 
-            className="w-full h-full bg-gray-100"
+            className={`w-full h-full bg-gray-100 ${isDraggingObject ? 'cursor-move' : 'cursor-default'}`}
             data-testid="three-canvas"
           />
         )}
@@ -1459,7 +1517,18 @@ export default function ThreeDDesigner() {
           <p className="text-xs text-muted-foreground">• Click & drag to rotate</p>
           <p className="text-xs text-muted-foreground">• Scroll to zoom</p>
           <p className="text-xs text-muted-foreground">• Click objects to select</p>
+          <p className="text-xs text-muted-foreground">• Ctrl+drag objects to move</p>
         </div>
+
+        {/* Drag mode indicator */}
+        {isDraggingObject && (
+          <div className="absolute top-4 left-4 bg-primary text-primary-foreground px-3 py-2 rounded-lg shadow-lg z-10">
+            <div className="flex items-center gap-2">
+              <Move3D className="w-4 h-4" />
+              <span className="text-sm font-medium">Moving Object</span>
+            </div>
+          </div>
+        )}
 
         {/* Scene Info */}
         <div className="absolute bottom-4 left-4 bg-card/80 backdrop-blur-sm rounded-lg p-3 border">
