@@ -1396,7 +1396,7 @@ export default function ThreeDDesigner() {
                         <Input
                           type="number"
                           step="0.1"
-                          value={selectedObject.rotation[idx].toFixed(2)}
+                          value={selectedObject.rotation[idx]}
                           onChange={(e) => {
                             const newRotation = [...selectedObject.rotation] as [number, number, number];
                             newRotation[idx] = parseFloat(e.target.value) || 0;
