@@ -5,6 +5,7 @@
 CreativeAI Studio is a comprehensive creative platform that combines multiple AI-powered creative tools into a unified workspace. The platform integrates 3D modeling, music production, video editing, and code development with real-time collaboration features and AI assistance. Built with React and Express, it provides a modern web-based creative environment designed for professional creators and teams.
 
 ### Recent Updates (September 16, 2025)
+- **Added Ctrl+Drag object movement**: Hold Ctrl and drag any object in the 3D scene to move it around freely
 - **Fixed spatial positioning bug**: AI-generated objects now properly position according to spatial keywords instead of overlapping
 - **Added AI prompt editing**: Objects remember their original AI prompts and can be edited in the Properties panel
 - **Enhanced 3D object management**: Improved Properties panel with AI prompt editing field for AI-generated objects
