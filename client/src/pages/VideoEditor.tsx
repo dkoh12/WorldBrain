@@ -596,6 +596,16 @@ export default function VideoEditor() {
     });
   };
 
+  // Update selectedClip when clips change to keep it in sync
+  useEffect(() => {
+    if (selectedClip) {
+      const updatedClip = clips.find(clip => clip.id === selectedClip.id);
+      if (updatedClip && updatedClip !== selectedClip) {
+        setSelectedClip(updatedClip);
+      }
+    }
+  }, [clips, selectedClip]);
+
   // Update canvas when currentTime or clips change
   useEffect(() => {
     const canvas = canvasRef.current;
