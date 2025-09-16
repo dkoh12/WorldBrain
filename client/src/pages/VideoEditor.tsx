@@ -525,6 +525,35 @@ export default function VideoEditor() {
     ));
   };
 
+  // Helper functions for direct effect controls
+  const getEffectValue = (clip: VideoClip, effectType: VideoFilter['type']): number => {
+    const filter = clip.filters.find(f => f.type === effectType);
+    return filter ? filter.intensity : (effectType === 'brightness' || effectType === 'contrast' || effectType === 'saturation') ? 1 : 0;
+  };
+
+  const updateEffectValue = (clipId: string, effectType: VideoFilter['type'], value: number) => {
+    setClips(prev => prev.map(clip => {
+      if (clip.id !== clipId) return clip;
+      
+      const existingFilterIndex = clip.filters.findIndex(f => f.type === effectType);
+      
+      if (existingFilterIndex >= 0) {
+        // Update existing filter
+        const updatedFilters = [...clip.filters];
+        updatedFilters[existingFilterIndex] = { ...updatedFilters[existingFilterIndex], intensity: value };
+        return { ...clip, filters: updatedFilters };
+      } else {
+        // Add new filter
+        const newFilter: VideoFilter = {
+          id: `filter-${Date.now()}-${effectType}`,
+          type: effectType,
+          intensity: value
+        };
+        return { ...clip, filters: [...clip.filters, newFilter] };
+      }
+    }));
+  };
+
   const handleAIGeneration = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -842,46 +871,82 @@ export default function VideoEditor() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Palette className="w-5 h-5" />
-                      Filters & Effects
+                      Video Effects
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-4">
                     {selectedClip ? (
                       <>
-                        <div className="grid grid-cols-2 gap-2">
-                          {['brightness', 'contrast', 'saturation', 'blur', 'sepia', 'grayscale'].map(filterType => (
-                            <Button
-                              key={filterType}
-                              size="sm"
-                              variant="outline"
-                              onClick={() => addFilter(selectedClip.id, filterType as VideoFilter['type'])}
-                              data-testid={`button-add-filter-${filterType}`}
-                            >
-                              {filterType}
-                            </Button>
-                          ))}
+                        <div>
+                          <label className="text-sm font-medium">Brightness: {getEffectValue(selectedClip, 'brightness').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'brightness')]}
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'brightness', value[0])}
+                            data-testid="slider-brightness"
+                          />
                         </div>
-                        
-                        {selectedClip.filters.map(filter => (
-                          <div key={filter.id} className="space-y-2 p-3 border rounded">
-                            <div className="flex justify-between items-center">
-                              <span className="text-sm font-medium capitalize">{filter.type}</span>
-                              <Badge variant="secondary">{filter.intensity.toFixed(2)}</Badge>
-                            </div>
-                            <Slider
-                              value={[filter.intensity]}
-                              min={0}
-                              max={2}
-                              step={0.1}
-                              onValueChange={(value) => updateFilter(selectedClip.id, filter.id, value[0])}
-                              data-testid={`slider-filter-${filter.type}-${filter.id}`}
-                            />
-                          </div>
-                        ))}
+                        <div>
+                          <label className="text-sm font-medium">Contrast: {getEffectValue(selectedClip, 'contrast').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'contrast')]}
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'contrast', value[0])}
+                            data-testid="slider-contrast"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Saturation: {getEffectValue(selectedClip, 'saturation').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'saturation')]}
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'saturation', value[0])}
+                            data-testid="slider-saturation"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Blur: {getEffectValue(selectedClip, 'blur').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'blur')]}
+                            min={0}
+                            max={2}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'blur', value[0])}
+                            data-testid="slider-blur"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Sepia: {getEffectValue(selectedClip, 'sepia').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'sepia')]}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'sepia', value[0])}
+                            data-testid="slider-sepia"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-sm font-medium">Grayscale: {getEffectValue(selectedClip, 'grayscale').toFixed(1)}</label>
+                          <Slider
+                            value={[getEffectValue(selectedClip, 'grayscale')]}
+                            min={0}
+                            max={1}
+                            step={0.1}
+                            onValueChange={(value) => updateEffectValue(selectedClip.id, 'grayscale', value[0])}
+                            data-testid="slider-grayscale"
+                          />
+                        </div>
                       </>
                     ) : (
                       <p className="text-muted-foreground text-center py-4">
-                        Select a clip to add effects
+                        Select a clip to adjust effects
                       </p>
                     )}
                   </CardContent>
