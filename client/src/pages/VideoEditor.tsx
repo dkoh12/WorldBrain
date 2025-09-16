@@ -191,101 +191,7 @@ export default function VideoEditor() {
     ctx.stroke();
   };
 
-  const drawClip = (ctx: CanvasRenderingContext2D, clip: VideoClip) => {
-    const progress = (currentTime - clip.startTime) / clip.duration;
-    
-    switch (clip.type) {
-      case 'video':
-        // Create dynamic sample video content
-        drawSampleVideoFrame(ctx, progress, currentTime);
-        break;
-        
-      case 'text':
-        ctx.fillStyle = '#ffffff';
-        ctx.font = '32px Arial';
-        ctx.textAlign = 'center';
-        ctx.fillText(clip.name, ctx.canvas.width / 2, ctx.canvas.height / 2);
-        break;
-        
-      case 'image':
-        // Placeholder for image
-        ctx.fillStyle = '#10b981';
-        ctx.fillRect(50, 50, ctx.canvas.width - 100, ctx.canvas.height - 100);
-        break;
-    }
-
-    // Apply filters
-    clip.filters.forEach(filter => {
-      applyFilter(ctx, filter);
-    });
-  };
-
-  const applyFilter = (ctx: CanvasRenderingContext2D, filter: VideoFilter) => {
-    const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
-    const data = imageData.data;
-
-    switch (filter.type) {
-      case 'brightness':
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.min(255, data[i] * filter.intensity);     // Red
-          data[i + 1] = Math.min(255, data[i + 1] * filter.intensity); // Green
-          data[i + 2] = Math.min(255, data[i + 2] * filter.intensity); // Blue
-        }
-        break;
-        
-      case 'contrast':
-        for (let i = 0; i < data.length; i += 4) {
-          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * filter.intensity + 128));
-          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * filter.intensity + 128));
-          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * filter.intensity + 128));
-        }
-        break;
-        
-      case 'saturation':
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
-          data[i] = Math.min(255, gray + (data[i] - gray) * filter.intensity);
-          data[i + 1] = Math.min(255, gray + (data[i + 1] - gray) * filter.intensity);
-          data[i + 2] = Math.min(255, gray + (data[i + 2] - gray) * filter.intensity);
-        }
-        break;
-        
-      case 'blur':
-        // Simple box blur approximation for demonstration
-        const blurRadius = Math.floor(filter.intensity * 3);
-        if (blurRadius > 0) {
-          for (let i = 0; i < data.length; i += 4) {
-            data[i] = Math.min(255, data[i] * 0.8 + 0.2 * 128);     // Simple blur effect
-            data[i + 1] = Math.min(255, data[i + 1] * 0.8 + 0.2 * 128);
-            data[i + 2] = Math.min(255, data[i + 2] * 0.8 + 0.2 * 128);
-          }
-        }
-        break;
-        
-      case 'grayscale':
-        for (let i = 0; i < data.length; i += 4) {
-          const gray = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
-          data[i] = gray;
-          data[i + 1] = gray;
-          data[i + 2] = gray;
-        }
-        break;
-        
-      case 'sepia':
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i + 1];
-          const b = data[i + 2];
-          data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
-          data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
-          data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
-        }
-        break;
-    }
-
-    ctx.putImageData(imageData, 0, 0);
-  };
-
+  // Helper functions for drawing video content
   const drawSampleVideoFrame = (ctx: CanvasRenderingContext2D, progress: number, time: number) => {
     const width = ctx.canvas.width;
     const height = ctx.canvas.height;
@@ -439,6 +345,101 @@ export default function VideoEditor() {
       ctx.fill();
       ctx.restore();
     }
+  };
+
+  const drawClip = (ctx: CanvasRenderingContext2D, clip: VideoClip) => {
+    const progress = (currentTime - clip.startTime) / clip.duration;
+    
+    switch (clip.type) {
+      case 'video':
+        // Create dynamic sample video content
+        drawSampleVideoFrame(ctx, progress, currentTime);
+        break;
+        
+      case 'text':
+        ctx.fillStyle = '#ffffff';
+        ctx.font = '32px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(clip.name, ctx.canvas.width / 2, ctx.canvas.height / 2);
+        break;
+        
+      case 'image':
+        // Placeholder for image
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(50, 50, ctx.canvas.width - 100, ctx.canvas.height - 100);
+        break;
+    }
+
+    // Apply filters
+    clip.filters.forEach(filter => {
+      applyFilter(ctx, filter);
+    });
+  };
+
+  const applyFilter = (ctx: CanvasRenderingContext2D, filter: VideoFilter) => {
+    const imageData = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
+    const data = imageData.data;
+
+    switch (filter.type) {
+      case 'brightness':
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.min(255, data[i] * filter.intensity);     // Red
+          data[i + 1] = Math.min(255, data[i + 1] * filter.intensity); // Green
+          data[i + 2] = Math.min(255, data[i + 2] * filter.intensity); // Blue
+        }
+        break;
+        
+      case 'contrast':
+        for (let i = 0; i < data.length; i += 4) {
+          data[i] = Math.min(255, Math.max(0, (data[i] - 128) * filter.intensity + 128));
+          data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * filter.intensity + 128));
+          data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * filter.intensity + 128));
+        }
+        break;
+        
+      case 'saturation':
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+          data[i] = Math.min(255, gray + (data[i] - gray) * filter.intensity);
+          data[i + 1] = Math.min(255, gray + (data[i + 1] - gray) * filter.intensity);
+          data[i + 2] = Math.min(255, gray + (data[i + 2] - gray) * filter.intensity);
+        }
+        break;
+        
+      case 'blur':
+        // Simple box blur approximation for demonstration
+        const blurRadius = Math.floor(filter.intensity * 3);
+        if (blurRadius > 0) {
+          for (let i = 0; i < data.length; i += 4) {
+            data[i] = Math.min(255, data[i] * 0.8 + 0.2 * 128);     // Simple blur effect
+            data[i + 1] = Math.min(255, data[i + 1] * 0.8 + 0.2 * 128);
+            data[i + 2] = Math.min(255, data[i + 2] * 0.8 + 0.2 * 128);
+          }
+        }
+        break;
+        
+      case 'grayscale':
+        for (let i = 0; i < data.length; i += 4) {
+          const gray = data[i] * 0.3 + data[i + 1] * 0.59 + data[i + 2] * 0.11;
+          data[i] = gray;
+          data[i + 1] = gray;
+          data[i + 2] = gray;
+        }
+        break;
+        
+      case 'sepia':
+        for (let i = 0; i < data.length; i += 4) {
+          const r = data[i];
+          const g = data[i + 1];
+          const b = data[i + 2];
+          data[i] = Math.min(255, (r * 0.393) + (g * 0.769) + (b * 0.189));
+          data[i + 1] = Math.min(255, (r * 0.349) + (g * 0.686) + (b * 0.168));
+          data[i + 2] = Math.min(255, (r * 0.272) + (g * 0.534) + (b * 0.131));
+        }
+        break;
+    }
+
+    ctx.putImageData(imageData, 0, 0);
   };
 
   const togglePlayback = () => {
