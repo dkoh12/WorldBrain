@@ -699,10 +699,10 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
 
           {/* AI Assistant Panel */}
           {showAssistantPanel && (
-            <div className="w-80 border-l bg-muted/30 flex flex-col">
+            <div className="w-72 border-l bg-muted/30 flex flex-col overflow-hidden">
               <div className="p-3 border-b bg-card">
                 <div className="flex items-center justify-between">
-                  <h3 className="font-medium flex items-center gap-2">
+                  <h3 className="font-medium flex items-center gap-2 text-sm">
                     <Sparkles className="w-4 h-4 text-primary" />
                     AI Assistant
                   </h3>
@@ -712,11 +712,11 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                 </div>
               </div>
 
-            <div className="flex-1 p-3 space-y-3">
+            <div className="flex-1 p-3 space-y-3 overflow-y-auto overflow-x-hidden">
               {/* AI Action Buttons */}
               <div className="space-y-2">
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-8 px-3 text-sm" 
                   variant="outline"
                   size="sm"
                   onClick={handleGenerateCode}
@@ -724,11 +724,11 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                   data-testid="button-generate-code"
                 >
                   <Lightbulb className="w-4 h-4 mr-2" />
-                  Generate Code
+                  <span className="truncate">Generate Code</span>
                 </Button>
                 
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-8 px-3 text-sm" 
                   variant="outline"
                   size="sm"
                   onClick={handleDebugCode}
@@ -736,11 +736,11 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                   data-testid="button-debug-code"
                 >
                   <Bug className="w-4 h-4 mr-2" />
-                  Debug Code
+                  <span className="truncate">Debug Code</span>
                 </Button>
                 
                 <Button 
-                  className="w-full justify-start" 
+                  className="w-full justify-start h-8 px-3 text-sm" 
                   variant="outline"
                   size="sm"
                   onClick={handleExplainCode}
@@ -748,7 +748,7 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                   data-testid="button-explain-code"
                 >
                   <FileText className="w-4 h-4 mr-2" />
-                  Explain Code
+                  <span className="truncate">Explain Code</span>
                 </Button>
               </div>
 
@@ -768,7 +768,7 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                         Analyzing your code...
                       </div>
                     ) : (
-                      <div className="text-sm leading-relaxed">{aiSuggestion}</div>
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap break-words overflow-hidden">{aiSuggestion}</div>
                     )}
                   </CardContent>
                 </Card>
@@ -779,31 +779,31 @@ Try creating a web-based version of your ${language} code, or use the AI Assista
                 <h4 className="text-sm font-medium text-muted-foreground">Quick Templates</h4>
                 <div className="space-y-1">
                   <Button 
-                    className="w-full justify-start text-xs" 
+                    className="w-full justify-start text-xs h-8 px-2" 
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCodeChange(activeFileData?.content + "\n\n// AI Template: React Component\nfunction MyComponent() {\n  return <div>Hello AI!</div>;\n}")}
                     data-testid="template-react"
                   >
-                    React Component
+                    <span className="truncate">React Component</span>
                   </Button>
                   <Button 
-                    className="w-full justify-start text-xs" 
+                    className="w-full justify-start text-xs h-8 px-2" 
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCodeChange(activeFileData?.content + "\n\n// AI Template: Async Function\nasync function fetchData() {\n  try {\n    const response = await fetch('/api/data');\n    return response.json();\n  } catch (error) {\n    console.error('Error:', error);\n  }\n}")}
                     data-testid="template-async"
                   >
-                    Async Function
+                    <span className="truncate">Async Function</span>
                   </Button>
                   <Button 
-                    className="w-full justify-start text-xs" 
+                    className="w-full justify-start text-xs h-8 px-2" 
                     variant="ghost"
                     size="sm"
                     onClick={() => handleCodeChange(activeFileData?.content + "\n\n// AI Template: API Route\napp.get('/api/endpoint', (req, res) => {\n  res.json({ message: 'Hello from AI!' });\n});")}
                     data-testid="template-api"
                   >
-                    API Route
+                    <span className="truncate">API Route</span>
                   </Button>
                 </div>
               </div>
