@@ -588,11 +588,11 @@ export default function ThreeDDesigner() {
     return mesh;
   };
 
-  const addObject = (type: SceneObject['type'], parameters?: { [key: string]: any }, customName?: string) => {
+  const addObject = (type: SceneObject['type'], parameters?: { [key: string]: any }, customName?: string, position?: [number, number, number]) => {
     const newObject: SceneObject = {
       id: `obj_${Date.now()}`,
       type,
-      position: [0, 1, 0],
+      position: position || [0, 1, 0],
       rotation: [0, 0, 0],
       scale: [1, 1, 1],
       color: '#4ecdc4',
@@ -648,6 +648,74 @@ export default function ThreeDDesigner() {
       });
       console.log('New 3D project created and saved');
     }
+  };
+
+  // Spatial arrangement calculator
+  const calculateSpatialPositions = (prompt: string, count: number) => {
+    const lowercasePrompt = prompt.toLowerCase();
+    const positions: [number, number, number][] = [];
+    const spacing = 3; // Distance between objects
+
+    // Detect spatial keywords and calculate positions accordingly
+    if (lowercasePrompt.includes('next to each other') || lowercasePrompt.includes('in a line') || 
+        lowercasePrompt.includes('row') || lowercasePrompt.includes('series')) {
+      // Arrange in a line along X-axis
+      for (let i = 0; i < count; i++) {
+        const x = (i - (count - 1) / 2) * spacing;
+        positions.push([x, 1, 0]);
+      }
+    } else if (lowercasePrompt.includes('circle') || lowercasePrompt.includes('around') || 
+               lowercasePrompt.includes('ring formation')) {
+      // Arrange in a circle
+      const radius = Math.max(3, count * 0.8);
+      for (let i = 0; i < count; i++) {
+        const angle = (i / count) * Math.PI * 2;
+        const x = Math.cos(angle) * radius;
+        const z = Math.sin(angle) * radius;
+        positions.push([x, 1, z]);
+      }
+    } else if (lowercasePrompt.includes('scattered') || lowercasePrompt.includes('random') || 
+               lowercasePrompt.includes('spread out')) {
+      // Random scattered positions
+      for (let i = 0; i < count; i++) {
+        const x = (Math.random() - 0.5) * 10;
+        const z = (Math.random() - 0.5) * 10;
+        const y = 1 + Math.random() * 2; // Slight height variation
+        positions.push([x, y, z]);
+      }
+    } else if (lowercasePrompt.includes('grid') || lowercasePrompt.includes('square formation')) {
+      // Arrange in a grid
+      const gridSize = Math.ceil(Math.sqrt(count));
+      for (let i = 0; i < count; i++) {
+        const row = Math.floor(i / gridSize);
+        const col = i % gridSize;
+        const x = (col - (gridSize - 1) / 2) * spacing;
+        const z = (row - (gridSize - 1) / 2) * spacing;
+        positions.push([x, 1, z]);
+      }
+    } else if (lowercasePrompt.includes('triangle') || lowercasePrompt.includes('triangular')) {
+      // Arrange in a triangle formation
+      let currentRow = 0;
+      let positionInRow = 0;
+      for (let i = 0; i < count; i++) {
+        if (positionInRow > currentRow) {
+          currentRow++;
+          positionInRow = 0;
+        }
+        const x = (positionInRow - currentRow / 2) * spacing;
+        const z = currentRow * spacing * 0.866; // √3/2 for equilateral triangle
+        positions.push([x, 1, z]);
+        positionInRow++;
+      }
+    } else {
+      // Default: slight offset for multiple objects
+      for (let i = 0; i < count; i++) {
+        const x = i * 2; // Space them out along X-axis by default
+        positions.push([x, 1, 0]);
+      }
+    }
+
+    return positions;
   };
 
   // AI prompt parser for 3D model generation
@@ -717,23 +785,63 @@ export default function ThreeDDesigner() {
       }
     }
 
-    // Handle multiple objects
+    // Handle multiple objects and spatial arrangements
+    let count = 1;
     if (lowercasePrompt.includes('multiple') || lowercasePrompt.includes('several') || 
-        lowercasePrompt.includes('many') || lowercasePrompt.includes('3') || 
-        lowercasePrompt.includes('5')) {
-      const count = Math.min(results.length > 0 ? 2 : 3, 5);
-      for (let i = 1; i < count; i++) {
-        if (results[0]) {
-          const variation: any = { ...results[0] };
-          variation.parameters = { ...variation.parameters };
-          // Add some variation
-          if (variation.type === 'helix') {
-            variation.parameters.turns = 2 + Math.random() * 4;
-            variation.parameters.radius = 0.5 + Math.random() * 1.5;
-          }
-          results.push(variation);
-        }
+        lowercasePrompt.includes('many') || lowercasePrompt.includes('series') ||
+        lowercasePrompt.includes('group') || lowercasePrompt.includes('collection')) {
+      count = 3;
+    }
+    
+    // Extract specific numbers from prompt
+    const numberMatches = lowercasePrompt.match(/\b(\d+)\b/g);
+    if (numberMatches) {
+      const num = parseInt(numberMatches[0]);
+      if (num >= 2 && num <= 10) {
+        count = num;
       }
+    }
+
+    // Special keywords that imply multiple objects
+    if (lowercasePrompt.includes('next to each other') || lowercasePrompt.includes('in a line') ||
+        lowercasePrompt.includes('circle') || lowercasePrompt.includes('grid') ||
+        lowercasePrompt.includes('scattered')) {
+      count = Math.max(count, 3);
+    }
+
+    // Calculate positions for all objects
+    const positions = calculateSpatialPositions(prompt, count);
+
+    // Create multiple objects with different positions
+    if (count > 1 && results.length > 0) {
+      const baseResult = results[0];
+      results.length = 0; // Clear and rebuild with positions
+      
+      for (let i = 0; i < count; i++) {
+        const variation: any = { 
+          ...baseResult,
+          position: positions[i],
+          name: `${baseResult.name} ${i + 1}`,
+          parameters: { ...baseResult.parameters }
+        };
+        
+        // Add some variation to make each object unique
+        if (variation.type === 'helix') {
+          variation.parameters.turns = 2 + Math.random() * 3;
+          variation.parameters.radius = 0.8 + Math.random() * 0.8;
+        } else if (variation.type === 'tower') {
+          variation.parameters.height = 3 + Math.random() * 2;
+          variation.parameters.levels = 2 + Math.floor(Math.random() * 3);
+        } else if (variation.type === 'spiral') {
+          variation.parameters.turns = 3 + Math.random() * 2;
+          variation.parameters.outerRadius = 1.5 + Math.random() * 1;
+        }
+        
+        results.push(variation);
+      }
+    } else if (results.length > 0) {
+      // Single object gets the first calculated position
+      (results[0] as any).position = positions[0];
     }
 
     // Default fallback
@@ -787,7 +895,7 @@ export default function ThreeDDesigner() {
         let delay = 800; // Start after AI response
         modelSpecs.forEach((spec, index) => {
           setTimeout(() => {
-            const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name);
+            const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name, spec.position);
             // Update color
             if (newObject) {
               updateObject(newObject.id, { color: spec.color });
