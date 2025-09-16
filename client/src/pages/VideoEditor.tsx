@@ -1119,7 +1119,7 @@ export default function VideoEditor() {
                           <div key={layerIndex} className="relative">
                             {/* Track label */}
                             <div className="flex items-center mb-1">
-                              <div className="w-16 text-xs text-muted-foreground font-medium">
+                              <div className="w-24 text-xs text-muted-foreground font-medium whitespace-nowrap">
                                 {getTrackName(layerIndex)}
                               </div>
                             </div>
