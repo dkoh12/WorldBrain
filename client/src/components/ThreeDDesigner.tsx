@@ -1377,6 +1377,7 @@ export default function ThreeDDesigner() {
                             newPosition[idx] = parseFloat(e.target.value) || 0;
                             updateObject(selectedObject.id, { position: newPosition });
                           }}
+                          onFocus={(e) => e.target.select()}
                           className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           data-testid={`input-position-${axis.toLowerCase()}`}
                         />
@@ -1401,6 +1402,7 @@ export default function ThreeDDesigner() {
                             newRotation[idx] = parseFloat(e.target.value) || 0;
                             updateObject(selectedObject.id, { rotation: newRotation });
                           }}
+                          onFocus={(e) => e.target.select()}
                           className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           data-testid={`input-rotation-${axis.toLowerCase()}`}
                         />
@@ -1426,6 +1428,7 @@ export default function ThreeDDesigner() {
                             newScale[idx] = Math.max(0.1, parseFloat(e.target.value) || 1);
                             updateObject(selectedObject.id, { scale: newScale });
                           }}
+                          onFocus={(e) => e.target.select()}
                           className="[&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none [-moz-appearance:textfield]"
                           data-testid={`input-scale-${axis.toLowerCase()}`}
                         />
