@@ -33,7 +33,7 @@ import {
 
 interface SceneObject {
   id: string;
-  type: 'box' | 'sphere' | 'cylinder' | 'torus' | 'plane';
+  type: 'box' | 'sphere' | 'cylinder' | 'torus' | 'plane' | 'helix' | 'spiral' | 'pyramid' | 'tower' | 'ring' | 'coil';
   position: [number, number, number];
   rotation: [number, number, number];
   scale: [number, number, number];
@@ -41,6 +41,7 @@ interface SceneObject {
   material: 'standard' | 'basic' | 'phong' | 'wireframe';
   name: string;
   mesh?: THREE.Mesh;
+  parameters?: { [key: string]: any };
 }
 
 interface Scene3D {
@@ -62,6 +63,7 @@ export default function ThreeDDesigner() {
   const raycasterRef = useRef<THREE.Raycaster>();
   const mouseRef = useRef<THREE.Vector2>();
   const animationIdRef = useRef<number>();
+  const meshMapRef = useRef<Map<string, THREE.Mesh>>(new Map());
 
   const [scene3D, setScene3D] = useState<Scene3D>({
     id: 'default',
@@ -186,11 +188,16 @@ export default function ThreeDDesigner() {
         raycaster.setFromCamera(mouse, camera);
         const intersects = raycaster.intersectObjects(scene.children, true);
 
-        if (intersects.length > 0) {
-          const clickedObject = intersects[0].object;
-          const sceneObject = scene3D.objects.find(obj => obj.mesh === clickedObject);
-          if (sceneObject) {
-            setSelectedObjectId(sceneObject.id);
+        // Filter out wireframes and non-scene objects
+        const validIntersects = intersects.filter(intersect => 
+          !intersect.object.userData.isSelectionWireframe && 
+          intersect.object.userData.isSceneObject
+        );
+
+        if (validIntersects.length > 0) {
+          const clickedObjectId = validIntersects[0].object.userData.objectId;
+          if (clickedObjectId) {
+            setSelectedObjectId(clickedObjectId);
           }
         } else {
           setSelectedObjectId(null);
@@ -295,11 +302,15 @@ export default function ThreeDDesigner() {
   useEffect(() => {
     if (!sceneRef.current) return;
 
-    // Clear existing meshes
+    // Clear existing meshes and wireframes
     const objectsToRemove = sceneRef.current.children.filter(child => 
-      child instanceof THREE.Mesh && child.userData.isSceneObject
+      (child instanceof THREE.Mesh && child.userData.isSceneObject) ||
+      child.userData.isSelectionWireframe
     );
     objectsToRemove.forEach(obj => sceneRef.current!.remove(obj));
+
+    // Clear mesh map
+    meshMapRef.current.clear();
 
     // Add all objects from state
     scene3D.objects.forEach(obj => {
@@ -309,39 +320,177 @@ export default function ThreeDDesigner() {
         mesh.userData.objectId = obj.id;
         sceneRef.current!.add(mesh);
         
-        // Update object reference
-        obj.mesh = mesh;
-        
-        // Highlight selected object
-        if (obj.id === selectedObjectId) {
-          const wireframe = new THREE.WireframeGeometry(mesh.geometry);
-          const line = new THREE.LineSegments(wireframe, new THREE.LineBasicMaterial({ color: 0xffff00 }));
-          line.userData.isSelectionWireframe = true;
-          sceneRef.current!.add(line);
-        }
+        // Store mesh in external map (no state mutation)
+        meshMapRef.current.set(obj.id, mesh);
       }
     });
 
-    // Remove old selection wireframes
-    const wireframesToRemove = sceneRef.current.children.filter(child => 
-      child.userData.isSelectionWireframe
-    );
-    wireframesToRemove.forEach(wireframe => sceneRef.current!.remove(wireframe));
-
-    // Add new selection wireframe
+    // Add selection wireframe for selected object
     if (selectedObjectId) {
-      const selectedObj = scene3D.objects.find(obj => obj.id === selectedObjectId);
-      if (selectedObj && selectedObj.mesh) {
-        const wireframe = new THREE.WireframeGeometry(selectedObj.mesh.geometry);
+      const selectedMesh = meshMapRef.current.get(selectedObjectId);
+      if (selectedMesh) {
+        const wireframe = new THREE.WireframeGeometry(selectedMesh.geometry);
         const line = new THREE.LineSegments(wireframe, new THREE.LineBasicMaterial({ color: 0xffff00 }));
-        line.position.copy(selectedObj.mesh.position);
-        line.rotation.copy(selectedObj.mesh.rotation);
-        line.scale.copy(selectedObj.mesh.scale);
+        line.position.copy(selectedMesh.position);
+        line.rotation.copy(selectedMesh.rotation);
+        line.scale.copy(selectedMesh.scale);
         line.userData.isSelectionWireframe = true;
         sceneRef.current.add(line);
       }
     }
   }, [scene3D.objects, selectedObjectId]);
+
+  // Procedural geometry generators
+  const createHelixGeometry = (radius = 1, height = 4, turns = 3, segments = 64) => {
+    const points = [];
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const angle = t * turns * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = (t - 0.5) * height;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    
+    const curve = new THREE.CatmullRomCurve3(points);
+    const tubeGeometry = new THREE.TubeGeometry(curve, segments, 0.1, 8, false);
+    return tubeGeometry;
+  };
+
+  const createSpiralGeometry = (innerRadius = 0.5, outerRadius = 2, height = 3, turns = 4) => {
+    const geometry = new THREE.BufferGeometry();
+    const vertices = [];
+    const indices = [];
+    const segments = 128;
+    
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const angle = t * turns * Math.PI * 2;
+      const radius = innerRadius + (outerRadius - innerRadius) * t;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = (t - 0.5) * height;
+      
+      vertices.push(x, y, z);
+      vertices.push(x, y - 0.1, z); // Bottom vertex
+      
+      if (i < segments) {
+        const base = i * 2;
+        indices.push(base, base + 1, base + 2);
+        indices.push(base + 1, base + 3, base + 2);
+      }
+    }
+    
+    geometry.setIndex(indices);
+    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    geometry.computeVertexNormals();
+    return geometry;
+  };
+
+  const createPyramidGeometry = (baseSize = 2, height = 3, sides = 4) => {
+    const geometry = new THREE.ConeGeometry(baseSize, height, sides);
+    return geometry;
+  };
+
+  const createTowerGeometry = (baseRadius = 1, topRadius = 0.5, height = 4, levels = 3) => {
+    // Guard against invalid levels
+    if (levels < 1) levels = 1;
+    
+    const levelHeight = height / levels;
+    const geometries: THREE.BufferGeometry[] = [];
+    
+    for (let i = 0; i < levels; i++) {
+      const t = levels === 1 ? 0 : i / (levels - 1);
+      const currentRadius = baseRadius + (topRadius - baseRadius) * t;
+      const nextRadius = levels === 1 ? topRadius : baseRadius + (topRadius - baseRadius) * (i + 1) / (levels - 1);
+      
+      const cylinderGeometry = new THREE.CylinderGeometry(nextRadius, currentRadius, levelHeight, 8);
+      
+      // Position the level
+      const matrix = new THREE.Matrix4();
+      matrix.makeTranslation(0, i * levelHeight - height / 2 + levelHeight / 2, 0);
+      cylinderGeometry.applyMatrix4(matrix);
+      
+      geometries.push(cylinderGeometry);
+    }
+    
+    // Merge all level geometries into one
+    const mergedGeometry = new THREE.BufferGeometry();
+    const vertices: number[] = [];
+    const normals: number[] = [];
+    const indices: number[] = [];
+    let vertexOffset = 0;
+    
+    geometries.forEach(geometry => {
+      const positionAttribute = geometry.getAttribute('position');
+      const normalAttribute = geometry.getAttribute('normal');
+      const geometryIndices = geometry.getIndex();
+      
+      if (positionAttribute && normalAttribute && geometryIndices) {
+        // Add vertices and normals
+        for (let i = 0; i < positionAttribute.count; i++) {
+          vertices.push(
+            positionAttribute.getX(i),
+            positionAttribute.getY(i),
+            positionAttribute.getZ(i)
+          );
+          normals.push(
+            normalAttribute.getX(i),
+            normalAttribute.getY(i),
+            normalAttribute.getZ(i)
+          );
+        }
+        
+        // Add indices with offset
+        for (let i = 0; i < geometryIndices.count; i++) {
+          indices.push(geometryIndices.getX(i) + vertexOffset);
+        }
+        
+        vertexOffset += positionAttribute.count;
+      }
+      
+      geometry.dispose();
+    });
+    
+    mergedGeometry.setIndex(indices);
+    mergedGeometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+    mergedGeometry.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    
+    return mergedGeometry;
+  };
+
+  const createRingGeometry = (innerRadius = 0.5, outerRadius = 1.5, thickness = 0.2) => {
+    // Validate inputs
+    if (innerRadius >= outerRadius) {
+      innerRadius = Math.max(0.1, outerRadius - 0.5);
+    }
+    
+    // Calculate proper torus parameters
+    const majorRadius = (innerRadius + outerRadius) / 2;
+    const tubeRadius = (outerRadius - innerRadius) / 2;
+    
+    // Ensure minimum tube radius for visibility
+    const finalTubeRadius = Math.max(tubeRadius, thickness);
+    
+    return new THREE.TorusGeometry(majorRadius, finalTubeRadius, 16, 100);
+  };
+
+  const createCoilGeometry = (radius = 1, height = 3, turns = 5, coilRadius = 0.15) => {
+    const points = [];
+    const segments = turns * 16;
+    
+    for (let i = 0; i <= segments; i++) {
+      const t = i / segments;
+      const angle = t * turns * Math.PI * 2;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
+      const y = (t - 0.5) * height;
+      points.push(new THREE.Vector3(x, y, z));
+    }
+    
+    const curve = new THREE.CatmullRomCurve3(points);
+    return new THREE.TubeGeometry(curve, segments, coilRadius, 8, false);
+  };
 
   const createMesh = (obj: SceneObject): THREE.Mesh | null => {
     let geometry: THREE.BufferGeometry;
@@ -361,6 +510,52 @@ export default function ThreeDDesigner() {
         break;
       case 'plane':
         geometry = new THREE.PlaneGeometry(2, 2);
+        break;
+      case 'helix':
+        geometry = createHelixGeometry(
+          obj.parameters?.radius || 1,
+          obj.parameters?.height || 4,
+          obj.parameters?.turns || 3,
+          obj.parameters?.segments || 64
+        );
+        break;
+      case 'spiral':
+        geometry = createSpiralGeometry(
+          obj.parameters?.innerRadius || 0.5,
+          obj.parameters?.outerRadius || 2,
+          obj.parameters?.height || 3,
+          obj.parameters?.turns || 4
+        );
+        break;
+      case 'pyramid':
+        geometry = createPyramidGeometry(
+          obj.parameters?.baseSize || 2,
+          obj.parameters?.height || 3,
+          obj.parameters?.sides || 4
+        );
+        break;
+      case 'tower':
+        geometry = createTowerGeometry(
+          obj.parameters?.baseRadius || 1,
+          obj.parameters?.topRadius || 0.5,
+          obj.parameters?.height || 4,
+          obj.parameters?.levels || 3
+        );
+        break;
+      case 'ring':
+        geometry = createRingGeometry(
+          obj.parameters?.innerRadius || 0.5,
+          obj.parameters?.outerRadius || 1.5,
+          obj.parameters?.thickness || 0.2
+        );
+        break;
+      case 'coil':
+        geometry = createCoilGeometry(
+          obj.parameters?.radius || 1,
+          obj.parameters?.height || 3,
+          obj.parameters?.turns || 5,
+          obj.parameters?.coilRadius || 0.15
+        );
         break;
       default:
         return null;
@@ -393,7 +588,7 @@ export default function ThreeDDesigner() {
     return mesh;
   };
 
-  const addObject = (type: SceneObject['type']) => {
+  const addObject = (type: SceneObject['type'], parameters?: { [key: string]: any }, customName?: string) => {
     const newObject: SceneObject = {
       id: `obj_${Date.now()}`,
       type,
@@ -402,7 +597,8 @@ export default function ThreeDDesigner() {
       scale: [1, 1, 1],
       color: '#4ecdc4',
       material: 'standard',
-      name: `${type.charAt(0).toUpperCase() + type.slice(1)} ${scene3D.objects.length + 1}`
+      name: customName || `${type.charAt(0).toUpperCase() + type.slice(1)} ${scene3D.objects.length + 1}`,
+      parameters
     };
 
     setScene3D(prev => ({
@@ -411,6 +607,7 @@ export default function ThreeDDesigner() {
     }));
     
     setSelectedObjectId(newObject.id);
+    return newObject;
   };
 
   const deleteObject = (objectId: string) => {
@@ -453,35 +650,161 @@ export default function ThreeDDesigner() {
     }
   };
 
+  // AI prompt parser for 3D model generation
+  const parseAI3DPrompt = (prompt: string) => {
+    const lowercasePrompt = prompt.toLowerCase();
+    const results = [];
+
+    // Pattern matching for different shapes and instructions (disambiguated keywords)
+    const patterns = [
+      {
+        keywords: ['helix', 'dna', 'spring', 'double helix'],
+        type: 'helix',
+        name: 'AI Generated Helix',
+        parameters: { radius: 1, height: 4, turns: 3, segments: 64 },
+        colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4']
+      },
+      {
+        keywords: ['spiral', 'swirl', 'twirl', 'vortex', 'flat spiral'],
+        type: 'spiral',
+        name: 'AI Generated Spiral',
+        parameters: { innerRadius: 0.5, outerRadius: 2, height: 3, turns: 4 },
+        colors: ['#feca57', '#ff9ff3', '#54a0ff', '#5f27cd']
+      },
+      {
+        keywords: ['pyramid', 'triangle', 'pointy', 'egyptian'],
+        type: 'pyramid',
+        name: 'AI Generated Pyramid',
+        parameters: { baseSize: 2, height: 3, sides: 4 },
+        colors: ['#ffb142', '#ff6348', '#ff4757', '#ffa502']
+      },
+      {
+        keywords: ['tower', 'tall', 'skyscraper', 'spire'],
+        type: 'tower',
+        name: 'AI Generated Tower',
+        parameters: { baseRadius: 1, topRadius: 0.5, height: 4, levels: 3 },
+        colors: ['#747d8c', '#a4b0be', '#57606f', '#2f3542']
+      },
+      {
+        keywords: ['ring', 'circle', 'donut', 'torus'],
+        type: 'ring',
+        name: 'AI Generated Ring',
+        parameters: { innerRadius: 0.5, outerRadius: 1.5, thickness: 0.2 },
+        colors: ['#3742fa', '#2f3542', '#ff4757', '#7bed9f']
+      },
+      {
+        keywords: ['coil', 'wire', 'cable', 'tube', 'spring coil'],
+        type: 'coil',
+        name: 'AI Generated Coil',
+        parameters: { radius: 1, height: 3, turns: 5, coilRadius: 0.15 },
+        colors: ['#70a1ff', '#5352ed', '#ff6b81', '#ffa8a8']
+      }
+    ];
+
+    // Check for matches (first match wins to avoid overlaps)
+    let matched = false;
+    for (const pattern of patterns) {
+      if (!matched && pattern.keywords.some(keyword => lowercasePrompt.includes(keyword))) {
+        const color = pattern.colors[Math.floor(Math.random() * pattern.colors.length)];
+        results.push({
+          type: pattern.type,
+          name: pattern.name,
+          parameters: pattern.parameters,
+          color: color
+        });
+        matched = true; // Prevent multiple matches for overlapping keywords
+        break;
+      }
+    }
+
+    // Handle multiple objects
+    if (lowercasePrompt.includes('multiple') || lowercasePrompt.includes('several') || 
+        lowercasePrompt.includes('many') || lowercasePrompt.includes('3') || 
+        lowercasePrompt.includes('5')) {
+      const count = Math.min(results.length > 0 ? 2 : 3, 5);
+      for (let i = 1; i < count; i++) {
+        if (results[0]) {
+          const variation: any = { ...results[0] };
+          variation.parameters = { ...variation.parameters };
+          // Add some variation
+          if (variation.type === 'helix') {
+            variation.parameters.turns = 2 + Math.random() * 4;
+            variation.parameters.radius = 0.5 + Math.random() * 1.5;
+          }
+          results.push(variation);
+        }
+      }
+    }
+
+    // Default fallback
+    if (results.length === 0) {
+      // Try to guess from general terms
+      if (lowercasePrompt.includes('organic') || lowercasePrompt.includes('natural')) {
+        results.push({
+          type: 'helix',
+          name: 'AI Generated Organic Shape',
+          parameters: { radius: 0.8, height: 3, turns: 2.5, segments: 48 },
+          color: '#2ed573'
+        });
+      } else if (lowercasePrompt.includes('geometric') || lowercasePrompt.includes('sharp')) {
+        results.push({
+          type: 'pyramid',
+          name: 'AI Generated Geometric Shape',
+          parameters: { baseSize: 1.5, height: 2.5, sides: 6 },
+          color: '#1e90ff'
+        });
+      }
+    }
+
+    return results;
+  };
+
   const handleGenerateAI3D = async () => {
     if (!aiPrompt.trim()) return;
     
     setIsAIProcessing(true);
     try {
+      // Parse the prompt to identify 3D models to create
+      const modelSpecs = parseAI3DPrompt(aiPrompt);
+      
       const response = await replitAI.generateResponse(
-        `Generate 3D scene suggestions for: ${aiPrompt}. Suggest object types, colors, compositions, and artistic elements for a 3D scene.`,
+        `Create a 3D scene description for: "${aiPrompt}". I am about to generate actual 3D models based on your prompt. ${
+          modelSpecs.length > 0 
+            ? `I will create: ${modelSpecs.map(spec => spec.name).join(', ')}.` 
+            : 'Suggest what 3D objects would best represent this concept.'
+        } Provide artistic guidance about colors, composition, and visual storytelling.`,
         {
           tool: "3D Designer",
           project: "AI Creative Platform",
-          currentWork: `Designing 3D scene: ${aiPrompt}`
+          currentWork: `Creating 3D models for: ${aiPrompt}`
         }
       );
       
       setAiSuggestion(response.content);
       
-      // Auto-generate some objects based on prompt
-      if (aiPrompt.toLowerCase().includes('city') || aiPrompt.toLowerCase().includes('building')) {
-        // Generate city-like structures
+      // Generate the actual 3D models
+      if (modelSpecs.length > 0) {
+        let delay = 800; // Start after AI response
+        modelSpecs.forEach((spec, index) => {
+          setTimeout(() => {
+            const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name);
+            // Update color
+            if (newObject) {
+              updateObject(newObject.id, { color: spec.color });
+            }
+          }, delay + index * 300); // Stagger creation
+        });
+        
+        // Update AI suggestion to include generation status
         setTimeout(() => {
-          addObject('box');
-          setTimeout(() => addObject('cylinder'), 100);
-          setTimeout(() => addObject('box'), 200);
-        }, 1000);
-      } else if (aiPrompt.toLowerCase().includes('abstract') || aiPrompt.toLowerCase().includes('art')) {
-        // Generate abstract shapes
+          setAiSuggestion(prev => 
+            prev + `\n\nGenerated ${modelSpecs.length} 3D model${modelSpecs.length > 1 ? 's' : ''} based on your prompt!`
+          );
+        }, delay + modelSpecs.length * 300 + 200);
+      } else {
+        // Fallback: Create a simple shape
         setTimeout(() => {
-          addObject('torus');
-          setTimeout(() => addObject('sphere'), 100);
+          addObject('sphere', { radius: 1 }, 'AI Interpretation');
         }, 1000);
       }
     } catch (error) {
@@ -804,10 +1127,10 @@ export default function ThreeDDesigner() {
               
               <div className="space-y-3">
                 <div>
-                  <Label htmlFor="ai-prompt">Describe your 3D scene</Label>
+                  <Label htmlFor="ai-prompt">Describe 3D models to create</Label>
                   <Input
                     id="ai-prompt"
-                    placeholder="A futuristic city, organic shapes, colorful abstract..."
+                    placeholder="E.g., 'draw a helix', 'create a spiral tower'..."
                     value={aiPrompt}
                     onChange={(e) => setAiPrompt(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleGenerateAI3D()}
@@ -824,15 +1147,74 @@ export default function ThreeDDesigner() {
                   {isAIProcessing ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
-                      Generating...
+                      Creating 3D Models...
                     </>
                   ) : (
                     <>
-                      <Lightbulb className="w-4 h-4 mr-2" />
-                      Generate AI Scene
+                      <Sparkles className="w-4 h-4 mr-2" />
+                      Generate & Render
                     </>
                   )}
                 </Button>
+              </div>
+
+              {/* Quick AI Actions */}
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-muted-foreground mb-2">Quick Generate</h4>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAiPrompt('draw a helix');
+                      setTimeout(() => handleGenerateAI3D(), 100);
+                    }}
+                    disabled={isAIProcessing}
+                    data-testid="button-quick-helix"
+                  >
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Helix
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAiPrompt('create a spiral');
+                      setTimeout(() => handleGenerateAI3D(), 100);
+                    }}
+                    disabled={isAIProcessing}
+                    data-testid="button-quick-spiral"
+                  >
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Spiral
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAiPrompt('build a tower');
+                      setTimeout(() => handleGenerateAI3D(), 100);
+                    }}
+                    disabled={isAIProcessing}
+                    data-testid="button-quick-tower"
+                  >
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Tower
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      setAiPrompt('organic coil structure');
+                      setTimeout(() => handleGenerateAI3D(), 100);
+                    }}
+                    disabled={isAIProcessing}
+                    data-testid="button-quick-organic"
+                  >
+                    <Lightbulb className="w-3 h-3 mr-1" />
+                    Organic
+                  </Button>
+                </div>
               </div>
 
               {/* AI Response */}
@@ -848,10 +1230,10 @@ export default function ThreeDDesigner() {
                     {isAIProcessing ? (
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-                        Creating 3D suggestions...
+                        Analyzing your request and generating 3D models...
                       </div>
                     ) : (
-                      <div className="text-sm leading-relaxed">{aiSuggestion}</div>
+                      <div className="text-sm leading-relaxed whitespace-pre-wrap">{aiSuggestion}</div>
                     )}
                   </CardContent>
                 </Card>
