@@ -211,38 +211,60 @@ export default function ThreeDDesigner() {
       let isDragging = false;
       let previousMousePosition = { x: 0, y: 0 };
       let dragStartMouse = { x: 0, y: 0 };
+      let isObjectDragging = false; // Local variable for immediate dragging state
+      let draggingObjectId: string | null = null;
+      let objectDragStartPosition: [number, number, number] | null = null;
 
       const handleMouseDown = (event: MouseEvent) => {
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
+        console.log('Mouse down - Ctrl key:', event.ctrlKey, 'Meta key:', event.metaKey);
+
         // Check if Ctrl key is held and if we're clicking on an object
         if (event.ctrlKey || event.metaKey) {
+          console.log('Ctrl key detected, checking for object intersection...');
           raycaster.setFromCamera(mouse, camera);
           const intersects = raycaster.intersectObjects(scene.children, true);
+          
+          console.log('All intersects:', intersects.length);
           
           const validIntersects = intersects.filter(intersect => 
             !intersect.object.userData.isSelectionWireframe && 
             intersect.object.userData.isSceneObject
           );
 
+          console.log('Valid intersects:', validIntersects.length);
+
           if (validIntersects.length > 0) {
             const clickedObjectId = validIntersects[0].object.userData.objectId;
+            console.log('Clicked object ID:', clickedObjectId);
             if (clickedObjectId) {
               // Start object dragging
+              console.log('Starting object drag for:', clickedObjectId);
+              
+              // Set both React state and local variables
               setIsDraggingObject(clickedObjectId);
               setSelectedObjectId(clickedObjectId);
+              isObjectDragging = true;
+              draggingObjectId = clickedObjectId;
               
               // Store the object's current position as drag start position
               const objToMove = scene3D.objects.find(obj => obj.id === clickedObjectId);
               if (objToMove) {
+                console.log('Object initial position:', objToMove.position);
                 setDragStartPosition([...objToMove.position]);
+                objectDragStartPosition = [...objToMove.position];
               }
               
               dragStartMouse = { x: event.clientX, y: event.clientY };
+              event.preventDefault();
+              event.stopPropagation();
               return; // Don't start camera dragging
             }
+          } else {
+            console.log('No valid objects intersected');
           }
         }
 
@@ -252,21 +274,23 @@ export default function ThreeDDesigner() {
       };
 
       const handleMouseMove = (event: MouseEvent) => {
-        if (isDraggingObject) {
+        if (isObjectDragging && draggingObjectId && objectDragStartPosition) {
+          console.log('Dragging object:', draggingObjectId);
           // Handle object dragging - calculate total movement from drag start
-          if (dragStartPosition) {
-            const movementScale = 0.02; // Adjust sensitivity
-            const totalDeltaX = event.clientX - dragStartMouse.x;
-            const totalDeltaY = event.clientY - dragStartMouse.y;
-            
-            const newPosition: [number, number, number] = [
-              dragStartPosition[0] + totalDeltaX * movementScale,
-              dragStartPosition[1] - totalDeltaY * movementScale, // Negative Y for intuitive up/down movement
-              dragStartPosition[2]
-            ];
+          const movementScale = 0.02; // Adjust sensitivity
+          const totalDeltaX = event.clientX - dragStartMouse.x;
+          const totalDeltaY = event.clientY - dragStartMouse.y;
+          
+          console.log('Mouse movement - deltaX:', totalDeltaX, 'deltaY:', totalDeltaY);
+          
+          const newPosition: [number, number, number] = [
+            objectDragStartPosition[0] + totalDeltaX * movementScale,
+            objectDragStartPosition[1] - totalDeltaY * movementScale, // Negative Y for intuitive up/down movement
+            objectDragStartPosition[2]
+          ];
 
-            updateObject(isDraggingObject, { position: newPosition });
-          }
+          console.log('New position:', newPosition);
+          updateObject(draggingObjectId, { position: newPosition });
 
           return;
         }
@@ -291,6 +315,9 @@ export default function ThreeDDesigner() {
 
       const handleMouseUp = () => {
         isDragging = false;
+        isObjectDragging = false;
+        draggingObjectId = null;
+        objectDragStartPosition = null;
         setIsDraggingObject(null);
         setDragStartPosition(null);
       };
