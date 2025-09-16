@@ -91,6 +91,8 @@ export default function ThreeDDesigner() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isDraggingObject, setIsDraggingObject] = useState<string | null>(null);
   const [dragStartPosition, setDragStartPosition] = useState<[number, number, number] | null>(null);
+  const [isRotatingObject, setIsRotatingObject] = useState<string | null>(null);
+  const [rotationStartAngles, setRotationStartAngles] = useState<[number, number, number] | null>(null);
 
   const selectedObject = scene3D.objects.find(obj => obj.id === selectedObjectId);
 
@@ -214,37 +216,62 @@ export default function ThreeDDesigner() {
       let isObjectDragging = false; // Local variable for immediate dragging state
       let draggingObjectId: string | null = null;
       let objectDragStartPosition: [number, number, number] | null = null;
+      let isObjectRotating = false; // Local variable for rotation mode
+      let rotatingObjectId: string | null = null;
+      let objectRotationStart: [number, number, number] | null = null;
 
       const handleMouseDown = (event: MouseEvent) => {
         const rect = renderer.domElement.getBoundingClientRect();
         mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
         mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
 
-        console.log('Mouse down - Ctrl key:', event.ctrlKey, 'Meta key:', event.metaKey);
-
-        // Check if Ctrl key is held and if we're clicking on an object
-        if (event.ctrlKey || event.metaKey) {
-          console.log('Ctrl key detected, checking for object intersection...');
+        // Check if Shift key is held for rotation
+        if (event.shiftKey) {
           raycaster.setFromCamera(mouse, camera);
           const intersects = raycaster.intersectObjects(scene.children, true);
-          
-          console.log('All intersects:', intersects.length);
           
           const validIntersects = intersects.filter(intersect => 
             !intersect.object.userData.isSelectionWireframe && 
             intersect.object.userData.isSceneObject
           );
 
-          console.log('Valid intersects:', validIntersects.length);
+          if (validIntersects.length > 0) {
+            const clickedObjectId = validIntersects[0].object.userData.objectId;
+            if (clickedObjectId) {
+              // Start object rotation
+              setIsRotatingObject(clickedObjectId);
+              setSelectedObjectId(clickedObjectId);
+              isObjectRotating = true;
+              rotatingObjectId = clickedObjectId;
+              
+              // Store the object's current rotation as rotation start
+              const objToRotate = scene3D.objects.find(obj => obj.id === clickedObjectId);
+              if (objToRotate) {
+                setRotationStartAngles([...objToRotate.rotation]);
+                objectRotationStart = [...objToRotate.rotation];
+              }
+              
+              dragStartMouse = { x: event.clientX, y: event.clientY };
+              event.preventDefault();
+              event.stopPropagation();
+              return; // Don't start camera dragging
+            }
+          }
+        }
+        // Check if Ctrl key is held and if we're clicking on an object
+        else if (event.ctrlKey || event.metaKey) {
+          raycaster.setFromCamera(mouse, camera);
+          const intersects = raycaster.intersectObjects(scene.children, true);
+          
+          const validIntersects = intersects.filter(intersect => 
+            !intersect.object.userData.isSelectionWireframe && 
+            intersect.object.userData.isSceneObject
+          );
 
           if (validIntersects.length > 0) {
             const clickedObjectId = validIntersects[0].object.userData.objectId;
-            console.log('Clicked object ID:', clickedObjectId);
             if (clickedObjectId) {
               // Start object dragging
-              console.log('Starting object drag for:', clickedObjectId);
-              
-              // Set both React state and local variables
               setIsDraggingObject(clickedObjectId);
               setSelectedObjectId(clickedObjectId);
               isObjectDragging = true;
@@ -253,7 +280,6 @@ export default function ThreeDDesigner() {
               // Store the object's current position as drag start position
               const objToMove = scene3D.objects.find(obj => obj.id === clickedObjectId);
               if (objToMove) {
-                console.log('Object initial position:', objToMove.position);
                 setDragStartPosition([...objToMove.position]);
                 objectDragStartPosition = [...objToMove.position];
               }
@@ -263,8 +289,6 @@ export default function ThreeDDesigner() {
               event.stopPropagation();
               return; // Don't start camera dragging
             }
-          } else {
-            console.log('No valid objects intersected');
           }
         }
 
@@ -274,14 +298,28 @@ export default function ThreeDDesigner() {
       };
 
       const handleMouseMove = (event: MouseEvent) => {
-        if (isObjectDragging && draggingObjectId && objectDragStartPosition) {
-          console.log('Dragging object:', draggingObjectId);
+        if (isObjectRotating && rotatingObjectId && objectRotationStart) {
+          // Handle object rotation - calculate rotation from mouse movement
+          const rotationScale = 0.01; // Adjust sensitivity
+          const totalDeltaX = event.clientX - dragStartMouse.x;
+          const totalDeltaY = event.clientY - dragStartMouse.y;
+          
+          // Map mouse movement to rotation: horizontal = Y rotation, vertical = X rotation
+          const newRotation: [number, number, number] = [
+            objectRotationStart[0] + totalDeltaY * rotationScale, // X rotation (pitch) from vertical mouse movement
+            objectRotationStart[1] + totalDeltaX * rotationScale, // Y rotation (yaw) from horizontal mouse movement  
+            objectRotationStart[2] // Keep Z rotation unchanged
+          ];
+
+          updateObject(rotatingObjectId, { rotation: newRotation });
+
+          return;
+        }
+        else if (isObjectDragging && draggingObjectId && objectDragStartPosition) {
           // Handle object dragging - calculate total movement from drag start
           const movementScale = 0.02; // Adjust sensitivity
           const totalDeltaX = event.clientX - dragStartMouse.x;
           const totalDeltaY = event.clientY - dragStartMouse.y;
-          
-          console.log('Mouse movement - deltaX:', totalDeltaX, 'deltaY:', totalDeltaY);
           
           const newPosition: [number, number, number] = [
             objectDragStartPosition[0] + totalDeltaX * movementScale,
@@ -289,7 +327,6 @@ export default function ThreeDDesigner() {
             objectDragStartPosition[2]
           ];
 
-          console.log('New position:', newPosition);
           updateObject(draggingObjectId, { position: newPosition });
 
           return;
@@ -318,8 +355,13 @@ export default function ThreeDDesigner() {
         isObjectDragging = false;
         draggingObjectId = null;
         objectDragStartPosition = null;
+        isObjectRotating = false;
+        rotatingObjectId = null;
+        objectRotationStart = null;
         setIsDraggingObject(null);
         setDragStartPosition(null);
+        setIsRotatingObject(null);
+        setRotationStartAngles(null);
       };
 
       const handleWheel = (event: WheelEvent) => {
@@ -971,8 +1013,6 @@ export default function ThreeDDesigner() {
     try {
       // Parse the prompt to identify 3D models to create
       const modelSpecs = parseAI3DPrompt(aiPrompt);
-      console.log('AI Prompt:', aiPrompt);
-      console.log('Model Specs generated:', modelSpecs);
       
       const response = await replitAI.generateResponse(
         `Create a 3D scene description for: "${aiPrompt}". I am about to generate actual 3D models based on your prompt. ${
@@ -995,10 +1035,9 @@ export default function ThreeDDesigner() {
         modelSpecs.forEach((spec, index) => {
           setTimeout(() => {
             const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name, spec.position, aiPrompt);
-            // Update color and log position for debugging
+            // Update color
             if (newObject) {
               updateObject(newObject.id, { color: spec.color });
-              console.log(`Created ${spec.name} at position:`, spec.position);
             }
           }, delay + index * 300); // Stagger creation
         });
@@ -1345,6 +1384,29 @@ export default function ThreeDDesigner() {
                   </div>
                 </div>
 
+                {/* Rotation */}
+                <div>
+                  <Label>Rotation (radians)</Label>
+                  <div className="grid grid-cols-3 gap-2">
+                    {(['X', 'Y', 'Z'] as const).map((axis, idx) => (
+                      <div key={axis}>
+                        <Label className="text-xs">{axis}</Label>
+                        <Input
+                          type="number"
+                          step="0.1"
+                          value={selectedObject.rotation[idx].toFixed(2)}
+                          onChange={(e) => {
+                            const newRotation = [...selectedObject.rotation] as [number, number, number];
+                            newRotation[idx] = parseFloat(e.target.value) || 0;
+                            updateObject(selectedObject.id, { rotation: newRotation });
+                          }}
+                          data-testid={`input-rotation-${axis.toLowerCase()}`}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
                 {/* Scale */}
                 <div>
                   <Label>Scale</Label>
@@ -1533,7 +1595,7 @@ export default function ThreeDDesigner() {
         ) : (
           <div 
             ref={mountRef} 
-            className={`w-full h-full bg-gray-100 ${isDraggingObject ? 'cursor-move' : 'cursor-default'}`}
+            className={`w-full h-full bg-gray-100 ${isDraggingObject ? 'cursor-move' : isRotatingObject ? 'cursor-crosshair' : 'cursor-default'}`}
             data-testid="three-canvas"
           />
         )}
@@ -1545,6 +1607,7 @@ export default function ThreeDDesigner() {
           <p className="text-xs text-muted-foreground">• Scroll to zoom</p>
           <p className="text-xs text-muted-foreground">• Click objects to select</p>
           <p className="text-xs text-muted-foreground">• Ctrl+drag objects to move</p>
+          <p className="text-xs text-muted-foreground">• Shift+drag objects to rotate</p>
         </div>
 
         {/* Drag mode indicator */}
@@ -1553,6 +1616,16 @@ export default function ThreeDDesigner() {
             <div className="flex items-center gap-2">
               <Move3D className="w-4 h-4" />
               <span className="text-sm font-medium">Moving Object</span>
+            </div>
+          </div>
+        )}
+
+        {/* Rotation mode indicator */}
+        {isRotatingObject && (
+          <div className="absolute top-4 left-4 bg-secondary text-secondary-foreground px-3 py-2 rounded-lg shadow-lg z-10">
+            <div className="flex items-center gap-2">
+              <RotateCcw className="w-4 h-4" />
+              <span className="text-sm font-medium">Rotating Object</span>
             </div>
           </div>
         )}
