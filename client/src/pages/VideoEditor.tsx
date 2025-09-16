@@ -630,18 +630,61 @@ export default function VideoEditor() {
   };
 
   const addClip = (type: VideoClip['type']) => {
+    // Smart layer assignment by clip type with overlap prevention
+    const getLayerForType = (clipType: VideoClip['type'], startTime: number, duration: number): number => {
+      // Preferred layers by clip type for better organization
+      const preferredLayers = {
+        video: 0,
+        text: 1, 
+        image: 2,
+        audio: 3
+      };
+      
+      const preferredLayer = preferredLayers[clipType];
+      
+      // Check if preferred layer is free or has room without overlapping
+      const clipsOnPreferredLayer = clips.filter(clip => clip.layer === preferredLayer);
+      const hasOverlap = clipsOnPreferredLayer.some(clip => 
+        startTime < clip.startTime + clip.duration && startTime + duration > clip.startTime
+      );
+      
+      if (!hasOverlap) {
+        return preferredLayer;
+      }
+      
+      // Find next available layer without conflicts
+      const maxLayer = clips.length > 0 ? Math.max(...clips.map(clip => clip.layer)) : -1;
+      for (let layer = 0; layer <= maxLayer + 1; layer++) {
+        const layerClips = clips.filter(clip => clip.layer === layer);
+        const hasConflict = layerClips.some(clip => 
+          startTime < clip.startTime + clip.duration && startTime + duration > clip.startTime
+        );
+        if (!hasConflict) {
+          return layer;
+        }
+      }
+      
+      // Fallback: use next available layer
+      return maxLayer + 1;
+    };
+    
+    const clipDuration = 3;
     const newClip: VideoClip = {
       id: `clip-${Date.now()}`,
       name: `New ${type} clip`,
       startTime: currentTime,
-      duration: 3,
+      duration: clipDuration,
       type,
       filters: [],
       visible: true,
       volume: type === 'audio' ? 1 : 0,
-      layer: clips.length
+      layer: getLayerForType(type, currentTime, clipDuration)
     };
+    
     setClips(prev => [...prev, newClip]);
+    
+    // Auto-select the new clip for immediate editing
+    setSelectedClip(newClip);
   };
 
   const updateClip = (clipId: string, updates: Partial<VideoClip>) => {
@@ -944,42 +987,159 @@ export default function VideoEditor() {
                       <Eye className="w-4 h-4 mr-1" />
                       Image
                     </Button>
+                    <Button size="sm" onClick={() => addClip('audio')} data-testid="button-add-audio-clip">
+                      <Volume2 className="w-4 h-4 mr-1" />
+                      Audio
+                    </Button>
                   </div>
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="space-y-2">
-                  {clips.map(clip => (
-                    <div 
-                      key={clip.id}
-                      className={`relative bg-muted rounded p-2 cursor-pointer transition-colors ${
-                        selectedClip?.id === clip.id ? 'bg-primary/20' : 'hover:bg-muted/80'
-                      }`}
-                      onClick={() => setSelectedClip(clip)}
-                      data-testid={`clip-${clip.id}`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className="font-medium">{clip.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary">{clip.type}</Badge>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              updateClip(clip.id, { visible: !clip.visible });
-                            }}
-                            data-testid={`button-toggle-visibility-${clip.id}`}
-                          >
-                            {clip.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
-                          </Button>
-                        </div>
-                      </div>
-                      <div className="text-xs text-muted-foreground mt-1">
-                        {clip.startTime}s - {clip.startTime + clip.duration}s (Layer {clip.layer})
+                <div className="space-y-4">
+                  {/* Timeline Container - Wraps ruler and tracks for unified playhead */}
+                  <div className="relative">
+                    {/* Timeline Ruler */}
+                    <div className="relative">
+                      <div className="flex border-b">
+                        {/* Time markers - Fixed sizing to ensure exactly 100% total width */}
+                        {(() => {
+                          const markerCount = Math.floor(timeline.duration / 5) + 1;
+                          const markerWidth = 100 / markerCount;
+                          return Array.from({ length: markerCount }, (_, i) => i * 5).map((time, index) => (
+                            <div key={time} className="flex-none" style={{ width: `${markerWidth}%` }}>
+                              <div className="text-xs text-muted-foreground pb-1">{time}s</div>
+                              <div className="h-2 border-l border-muted-foreground/20"></div>
+                            </div>
+                          ));
+                        })()}
                       </div>
                     </div>
-                  ))}
+
+                    {/* Multi-track Timeline */}
+                    <div className="space-y-1 mt-4">
+                      {(() => {
+                        // Calculate the number of tracks needed dynamically - ensure all clips are visible
+                        const maxLayer = clips.length > 0 ? Math.max(3, ...clips.map(clip => clip.layer)) : 3;
+                        const trackCount = maxLayer + 1; // Create exactly the right number of tracks
+                        
+                        return Array.from({ length: trackCount }, (_, layerIndex) => (
+                          <div key={layerIndex} className="relative">
+                            {/* Track label */}
+                            <div className="flex items-center mb-1">
+                              <div className="w-16 text-xs text-muted-foreground font-medium">
+                                Track {layerIndex}
+                              </div>
+                            </div>
+                            
+                            {/* Track container */}
+                            <div 
+                              className="relative h-12 bg-muted/30 rounded border border-muted/40"
+                              style={{ minWidth: '100%' }}
+                              data-testid={`timeline-track-${layerIndex}`}
+                            >
+                              {/* Clips on this layer */}
+                              {clips
+                                .filter(clip => clip.layer === layerIndex)
+                                .map(clip => {
+                                  const leftPosition = (clip.startTime / timeline.duration) * 100;
+                                  const width = (clip.duration / timeline.duration) * 100;
+                                  
+                                  // Color coding by clip type
+                                  const typeColors = {
+                                    video: 'bg-blue-500/80',
+                                    text: 'bg-purple-500/80',
+                                    image: 'bg-green-500/80',
+                                    audio: 'bg-orange-500/80'
+                                  };
+                                  
+                                  const bgColor = typeColors[clip.type] || 'bg-gray-500/80';
+                                  
+                                  return (
+                                    <div
+                                      key={clip.id}
+                                      className={`absolute top-1 bottom-1 rounded cursor-pointer transition-all duration-200 ${bgColor} ${
+                                        selectedClip?.id === clip.id 
+                                          ? 'ring-2 ring-primary ring-offset-1' 
+                                          : 'hover:brightness-110'
+                                      }`}
+                                      style={{
+                                        left: `${leftPosition}%`,
+                                        width: `${width}%`,
+                                        minWidth: '20px'
+                                      }}
+                                      onClick={() => setSelectedClip(clip)}
+                                      data-testid={`clip-block-${clip.id}`}
+                                    >
+                                      <div className="flex items-center justify-between h-full px-2 text-white text-xs">
+                                        <div className="truncate flex-1">
+                                          <div className="font-medium truncate">{clip.name}</div>
+                                        </div>
+                                        <div className="flex items-center gap-1 ml-2">
+                                          {!clip.visible && <EyeOff className="w-3 h-3 opacity-70" />}
+                                          <Button
+                                            size="sm"
+                                            variant="ghost"
+                                            className="h-4 w-4 p-0 hover:bg-white/20"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateClip(clip.id, { visible: !clip.visible });
+                                            }}
+                                            data-testid={`button-toggle-visibility-${clip.id}`}
+                                          >
+                                            {clip.visible ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                                          </Button>
+                                        </div>
+                                      </div>
+                                      
+                                      {/* Clip info tooltip */}
+                                      <div className="absolute -top-8 left-0 bg-black/80 text-white text-xs px-2 py-1 rounded opacity-0 hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
+                                        {clip.startTime}s - {clip.startTime + clip.duration}s
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                            </div>
+                          </div>
+                        ));
+                      })()}
+                    </div>
+                    
+                    {/* Current time indicator - spans full timeline height from ruler through all tracks */}
+                    <div 
+                      className="absolute top-0 w-0.5 bg-red-500 pointer-events-none z-30"
+                      style={{ 
+                        left: `${(currentTime / timeline.duration) * 100}%`,
+                        height: '100%' // Span from ruler through all tracks
+                      }}
+                      data-testid="timeline-current-position"
+                    />
+                  </div>
+
+                  {/* Timeline controls */}
+                  <div className="flex items-center justify-between text-sm text-muted-foreground">
+                    <div>
+                      Clips: {clips.length} | Duration: {timeline.duration}s
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>Zoom:</span>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setTimeline(prev => ({ ...prev, duration: Math.max(10, prev.duration - 10) }))}
+                        data-testid="button-zoom-in"
+                      >
+                        +
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setTimeline(prev => ({ ...prev, duration: Math.min(300, prev.duration + 10) }))}
+                        data-testid="button-zoom-out"
+                      >
+                        -
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </CardContent>
             </Card>
