@@ -42,6 +42,7 @@ interface SceneObject {
   name: string;
   mesh?: THREE.Mesh;
   parameters?: { [key: string]: any };
+  aiPrompt?: string; // Store the original AI prompt that created this object
 }
 
 interface Scene3D {
@@ -588,7 +589,7 @@ export default function ThreeDDesigner() {
     return mesh;
   };
 
-  const addObject = (type: SceneObject['type'], parameters?: { [key: string]: any }, customName?: string, position?: [number, number, number]) => {
+  const addObject = (type: SceneObject['type'], parameters?: { [key: string]: any }, customName?: string, position?: [number, number, number], aiPrompt?: string) => {
     const newObject: SceneObject = {
       id: `obj_${Date.now()}`,
       type,
@@ -598,7 +599,8 @@ export default function ThreeDDesigner() {
       color: '#4ecdc4',
       material: 'standard',
       name: customName || `${type.charAt(0).toUpperCase() + type.slice(1)} ${scene3D.objects.length + 1}`,
-      parameters
+      parameters,
+      aiPrompt
     };
 
     setScene3D(prev => ({
@@ -852,16 +854,26 @@ export default function ThreeDDesigner() {
           type: 'helix',
           name: 'AI Generated Organic Shape',
           parameters: { radius: 0.8, height: 3, turns: 2.5, segments: 48 },
-          color: '#2ed573'
+          color: '#2ed573',
+          position: [0, 1, 0]
         });
       } else if (lowercasePrompt.includes('geometric') || lowercasePrompt.includes('sharp')) {
         results.push({
           type: 'pyramid',
           name: 'AI Generated Geometric Shape',
           parameters: { baseSize: 1.5, height: 2.5, sides: 6 },
-          color: '#1e90ff'
+          color: '#1e90ff',
+          position: [0, 1, 0]
         });
       }
+    }
+
+    // Calculate positions for all objects if not already set
+    if (results.length > 0 && !results[0].position) {
+      const positions = calculateSpatialPositions(prompt, results.length);
+      results.forEach((result, index) => {
+        (result as any).position = positions[index];
+      });
     }
 
     return results;
@@ -874,6 +886,8 @@ export default function ThreeDDesigner() {
     try {
       // Parse the prompt to identify 3D models to create
       const modelSpecs = parseAI3DPrompt(aiPrompt);
+      console.log('AI Prompt:', aiPrompt);
+      console.log('Model Specs generated:', modelSpecs);
       
       const response = await replitAI.generateResponse(
         `Create a 3D scene description for: "${aiPrompt}". I am about to generate actual 3D models based on your prompt. ${
@@ -895,10 +909,11 @@ export default function ThreeDDesigner() {
         let delay = 800; // Start after AI response
         modelSpecs.forEach((spec, index) => {
           setTimeout(() => {
-            const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name, spec.position);
-            // Update color
+            const newObject = addObject(spec.type as SceneObject['type'], spec.parameters, spec.name, spec.position, aiPrompt);
+            // Update color and log position for debugging
             if (newObject) {
               updateObject(newObject.id, { color: spec.color });
+              console.log(`Created ${spec.name} at position:`, spec.position);
             }
           }, delay + index * 300); // Stagger creation
         });
@@ -912,7 +927,7 @@ export default function ThreeDDesigner() {
       } else {
         // Fallback: Create a simple shape
         setTimeout(() => {
-          addObject('sphere', { radius: 1 }, 'AI Interpretation');
+          addObject('sphere', { radius: 1 }, 'AI Interpretation', [0, 1, 0], aiPrompt);
         }, 1000);
       }
     } catch (error) {
@@ -1204,6 +1219,23 @@ export default function ThreeDDesigner() {
                     </SelectContent>
                   </Select>
                 </div>
+
+                {/* AI Prompt (if object was AI-generated) */}
+                {selectedObject.aiPrompt && (
+                  <div>
+                    <Label htmlFor="ai-prompt">Original AI Prompt</Label>
+                    <Input
+                      id="ai-prompt"
+                      value={selectedObject.aiPrompt}
+                      onChange={(e) => updateObject(selectedObject.id, { aiPrompt: e.target.value })}
+                      placeholder="Enter AI prompt to regenerate..."
+                      data-testid="input-ai-prompt-edit"
+                    />
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Edit this prompt and regenerate to modify the object
+                    </p>
+                  </div>
+                )}
 
                 {/* Position */}
                 <div>
