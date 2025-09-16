@@ -57,9 +57,9 @@ export default function VideoEditor() {
   const [clips, setClips] = useState<VideoClip[]>([
     {
       id: 'demo-1',
-      name: 'Nature Scene',
+      name: 'Opening Scene',
       startTime: 0,
-      duration: 8,
+      duration: 10,
       type: 'video',
       filters: [],
       visible: true,
@@ -69,8 +69,8 @@ export default function VideoEditor() {
     {
       id: 'demo-2',
       name: 'Welcome Title',
-      startTime: 1,
-      duration: 4,
+      startTime: 2,
+      duration: 6,
       type: 'text',
       filters: [{ id: 'f1', type: 'brightness', intensity: 1.2 }],
       visible: true,
@@ -79,14 +79,47 @@ export default function VideoEditor() {
     },
     {
       id: 'demo-3',
-      name: 'Outro Scene',
-      startTime: 12,
-      duration: 5,
+      name: 'Middle Scene',
+      startTime: 8,
+      duration: 12,
       type: 'video',
       filters: [{ id: 'f2', type: 'sepia', intensity: 0.6 }],
       visible: true,
       volume: 1,
       layer: 0
+    },
+    {
+      id: 'demo-4',
+      name: 'Product Image',
+      startTime: 15,
+      duration: 8,
+      type: 'image',
+      filters: [],
+      visible: true,
+      volume: 0,
+      layer: 2
+    },
+    {
+      id: 'demo-5',
+      name: 'Closing Title',
+      startTime: 25,
+      duration: 5,
+      type: 'text',
+      filters: [{ id: 'f3', type: 'contrast', intensity: 1.3 }],
+      visible: true,
+      volume: 0,
+      layer: 1
+    },
+    {
+      id: 'demo-6',
+      name: 'Background Music',
+      startTime: 0,
+      duration: 30,
+      type: 'audio',
+      filters: [],
+      visible: true,
+      volume: 0.6,
+      layer: 3
     }
   ]);
 
