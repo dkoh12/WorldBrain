@@ -844,6 +844,22 @@ export default function ThreeDDesigner() {
     }
   };
 
+  const zoomIn = () => {
+    if (cameraRef.current) {
+      const scale = 0.8; // Zoom in by moving camera closer
+      cameraRef.current.position.multiplyScalar(scale);
+      setCameraControls(prev => ({ ...prev, zoom: prev.zoom * scale }));
+    }
+  };
+
+  const zoomOut = () => {
+    if (cameraRef.current) {
+      const scale = 1.25; // Zoom out by moving camera farther
+      cameraRef.current.position.multiplyScalar(scale);
+      setCameraControls(prev => ({ ...prev, zoom: prev.zoom * scale }));
+    }
+  };
+
   return (
     <div className="h-screen flex bg-background">
       {/* Header */}
@@ -931,6 +947,26 @@ export default function ThreeDDesigner() {
             <div>
               <h3 className="font-medium mb-3">Camera</h3>
               <div className="space-y-2">
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={zoomIn}
+                    data-testid="button-zoom-in"
+                  >
+                    <ZoomIn className="w-4 h-4 mr-1" />
+                    Zoom In
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={zoomOut}
+                    data-testid="button-zoom-out"
+                  >
+                    <ZoomOut className="w-4 h-4 mr-1" />
+                    Zoom Out
+                  </Button>
+                </div>
                 <Button
                   variant="outline"
                   size="sm"
