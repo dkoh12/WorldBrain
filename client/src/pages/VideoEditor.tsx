@@ -80,7 +80,7 @@ export default function VideoEditor() {
     {
       id: 'demo-3',
       name: 'Middle Scene',
-      startTime: 8,
+      startTime: 10,
       duration: 12,
       type: 'video',
       filters: [{ id: 'f2', type: 'sepia', intensity: 0.6 }],
