@@ -56,9 +56,9 @@ export default function VideoEditor() {
   const [clips, setClips] = useState<VideoClip[]>([
     {
       id: 'demo-1',
-      name: 'Sample Video Clip',
+      name: 'Nature Scene',
       startTime: 0,
-      duration: 5,
+      duration: 8,
       type: 'video',
       filters: [],
       visible: true,
@@ -67,14 +67,25 @@ export default function VideoEditor() {
     },
     {
       id: 'demo-2',
-      name: 'Title Text',
-      startTime: 2,
-      duration: 3,
+      name: 'Welcome Title',
+      startTime: 1,
+      duration: 4,
       type: 'text',
       filters: [{ id: 'f1', type: 'brightness', intensity: 1.2 }],
       visible: true,
       volume: 0,
       layer: 1
+    },
+    {
+      id: 'demo-3',
+      name: 'Outro Scene',
+      startTime: 12,
+      duration: 5,
+      type: 'video',
+      filters: [{ id: 'f2', type: 'sepia', intensity: 0.6 }],
+      visible: true,
+      volume: 1,
+      layer: 0
     }
   ]);
 
@@ -185,13 +196,8 @@ export default function VideoEditor() {
     
     switch (clip.type) {
       case 'video':
-        // Simulate video frame with gradient
-        const gradient = ctx.createLinearGradient(0, 0, ctx.canvas.width, ctx.canvas.height);
-        gradient.addColorStop(0, '#4f46e5');
-        gradient.addColorStop(progress, '#7c3aed');
-        gradient.addColorStop(1, '#ec4899');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+        // Create dynamic sample video content
+        drawSampleVideoFrame(ctx, progress, currentTime);
         break;
         
       case 'text':
@@ -278,6 +284,161 @@ export default function VideoEditor() {
     }
 
     ctx.putImageData(imageData, 0, 0);
+  };
+
+  const drawSampleVideoFrame = (ctx: CanvasRenderingContext2D, progress: number, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    // Create animated sky background
+    const skyGradient = ctx.createLinearGradient(0, 0, 0, height);
+    const skyBlue = `hsl(210, 80%, ${60 + Math.sin(time * 0.5) * 10}%)`;
+    const lightBlue = `hsl(200, 70%, ${80 + Math.sin(time * 0.3) * 5}%)`;
+    skyGradient.addColorStop(0, skyBlue);
+    skyGradient.addColorStop(1, lightBlue);
+    ctx.fillStyle = skyGradient;
+    ctx.fillRect(0, 0, width, height);
+
+    // Draw animated clouds
+    drawAnimatedClouds(ctx, time);
+    
+    // Draw ground
+    ctx.fillStyle = '#4ade80';
+    ctx.fillRect(0, height * 0.7, width, height * 0.3);
+    
+    // Draw animated sun
+    const sunX = width * 0.8;
+    const sunY = height * 0.2 + Math.sin(time * 0.8) * 20;
+    const sunRadius = 30 + Math.sin(time * 2) * 5;
+    
+    // Sun rays
+    ctx.strokeStyle = '#fbbf24';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI * 2) / 8 + time * 0.5;
+      const rayLength = 50 + Math.sin(time * 3 + i) * 10;
+      ctx.beginPath();
+      ctx.moveTo(sunX + Math.cos(angle) * (sunRadius + 10), sunY + Math.sin(angle) * (sunRadius + 10));
+      ctx.lineTo(sunX + Math.cos(angle) * (sunRadius + rayLength), sunY + Math.sin(angle) * (sunRadius + rayLength));
+      ctx.stroke();
+    }
+    
+    // Sun circle
+    ctx.fillStyle = '#fbbf24';
+    ctx.beginPath();
+    ctx.arc(sunX, sunY, sunRadius, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Draw animated trees
+    drawAnimatedTrees(ctx, time);
+    
+    // Draw flying birds
+    drawFlyingBirds(ctx, time);
+    
+    // Add some sparkle effects
+    drawSparkles(ctx, time);
+  };
+
+  const drawAnimatedClouds = (ctx: CanvasRenderingContext2D, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    
+    // Cloud 1
+    const cloud1X = (width * 0.2 + time * 10) % (width + 100) - 50;
+    drawCloud(ctx, cloud1X, height * 0.15, 60);
+    
+    // Cloud 2
+    const cloud2X = (width * 0.6 + time * 15) % (width + 120) - 60;
+    drawCloud(ctx, cloud2X, height * 0.25, 40);
+    
+    // Cloud 3
+    const cloud3X = (width * 0.8 + time * 8) % (width + 80) - 40;
+    drawCloud(ctx, cloud3X, height * 0.12, 50);
+  };
+
+  const drawCloud = (ctx: CanvasRenderingContext2D, x: number, y: number, size: number) => {
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x, y, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.4, y, size * 0.7, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.8, y, size * 0.5, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.2, y - size * 0.3, size * 0.4, 0, Math.PI * 2);
+    ctx.arc(x + size * 0.6, y - size * 0.2, size * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  };
+
+  const drawAnimatedTrees = (ctx: CanvasRenderingContext2D, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    const groundY = height * 0.7;
+    
+    // Tree positions
+    const treePositions = [width * 0.1, width * 0.3, width * 0.9];
+    
+    treePositions.forEach((x, index) => {
+      const sway = Math.sin(time * 1.5 + index) * 8;
+      
+      // Tree trunk
+      ctx.fillStyle = '#8b4513';
+      ctx.fillRect(x - 8, groundY - 60, 16, 60);
+      
+      // Tree crown with slight sway
+      ctx.save();
+      ctx.translate(x, groundY - 60);
+      ctx.rotate(sway * 0.01);
+      ctx.fillStyle = '#22c55e';
+      ctx.beginPath();
+      ctx.arc(0, -30, 40, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    });
+  };
+
+  const drawFlyingBirds = (ctx: CanvasRenderingContext2D, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    ctx.strokeStyle = '#1f2937';
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    
+    // Flying birds in V formation
+    for (let i = 0; i < 5; i++) {
+      const birdX = (width * 0.1 + time * 30 + i * 25) % (width + 100);
+      const birdY = height * 0.3 + Math.sin(time * 4 + i * 0.5) * 15 + i * 8;
+      const wingFlap = Math.sin(time * 8 + i) * 0.3;
+      
+      // Bird V shape
+      ctx.beginPath();
+      ctx.moveTo(birdX - 8, birdY + wingFlap);
+      ctx.lineTo(birdX, birdY);
+      ctx.lineTo(birdX + 8, birdY + wingFlap);
+      ctx.stroke();
+    }
+  };
+
+  const drawSparkles = (ctx: CanvasRenderingContext2D, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    ctx.fillStyle = '#fef3c7';
+    
+    for (let i = 0; i < 8; i++) {
+      const sparkleX = (width * (0.1 + i * 0.12) + Math.sin(time * 2 + i) * 50) % width;
+      const sparkleY = height * (0.1 + Math.sin(time + i) * 0.1) + Math.cos(time * 3 + i) * 30;
+      const sparkleSize = 2 + Math.sin(time * 5 + i) * 1.5;
+      const alpha = 0.5 + Math.sin(time * 4 + i) * 0.5;
+      
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      ctx.beginPath();
+      ctx.arc(sparkleX, sparkleY, sparkleSize, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
   };
 
   const togglePlayback = () => {
