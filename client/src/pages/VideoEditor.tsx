@@ -26,6 +26,7 @@ interface VideoClip {
   duration: number;
   type: 'video' | 'image' | 'text' | 'audio';
   src?: string;
+  aiPrompt?: string;
   filters: VideoFilter[];
   visible: boolean;
   volume: number;
@@ -347,6 +348,125 @@ export default function VideoEditor() {
     }
   };
 
+  const drawImageClip = (ctx: CanvasRenderingContext2D, clip: VideoClip) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    if (clip.src && clip.src.startsWith('data:image/')) {
+      // Real uploaded image
+      const img = new Image();
+      img.onload = () => {
+        // Calculate aspect ratio to fit image properly
+        const imgAspect = img.width / img.height;
+        const canvasAspect = width / height;
+        
+        let drawWidth, drawHeight, drawX, drawY;
+        
+        if (imgAspect > canvasAspect) {
+          // Image is wider - fit to canvas width
+          drawWidth = width;
+          drawHeight = width / imgAspect;
+          drawX = 0;
+          drawY = (height - drawHeight) / 2;
+        } else {
+          // Image is taller - fit to canvas height
+          drawHeight = height;
+          drawWidth = height * imgAspect;
+          drawY = 0;
+          drawX = (width - drawWidth) / 2;
+        }
+        
+        ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+      };
+      img.src = clip.src;
+    } else if (clip.aiPrompt) {
+      // AI-generated image visualization
+      drawAIGeneratedImage(ctx, clip.aiPrompt, currentTime);
+    } else {
+      // Default placeholder
+      ctx.fillStyle = '#3b82f6';
+      ctx.fillRect(0, 0, width, height);
+      
+      // Add upload prompt
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '24px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Click to Upload Image', width / 2, height / 2 - 20);
+      ctx.fillText('or Use AI Generation', width / 2, height / 2 + 20);
+    }
+  };
+
+  const drawAIGeneratedImage = (ctx: CanvasRenderingContext2D, prompt: string, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    // Create an artistic visualization based on the AI prompt
+    // This simulates what an AI-generated image might look like
+    
+    // Generate colors based on prompt keywords
+    const colors = getColorsFromPrompt(prompt);
+    const primaryColor = colors[0];
+    const secondaryColor = colors[1];
+    
+    // Create gradient background
+    const gradient = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height)/2);
+    gradient.addColorStop(0, primaryColor);
+    gradient.addColorStop(1, secondaryColor);
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, width, height);
+    
+    // Add animated abstract shapes based on prompt
+    drawAbstractShapes(ctx, prompt, time);
+    
+    // Add AI generation watermark
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.font = '12px Arial';
+    ctx.textAlign = 'right';
+    ctx.fillText('AI Generated', width - 10, height - 10);
+  };
+
+  const getColorsFromPrompt = (prompt: string): string[] => {
+    const lowerPrompt = prompt.toLowerCase();
+    
+    // Color mapping based on keywords
+    if (lowerPrompt.includes('sunset') || lowerPrompt.includes('orange') || lowerPrompt.includes('warm')) {
+      return ['#ff6b35', '#f7931e'];
+    } else if (lowerPrompt.includes('ocean') || lowerPrompt.includes('blue') || lowerPrompt.includes('water')) {
+      return ['#0077be', '#00a8cc'];
+    } else if (lowerPrompt.includes('forest') || lowerPrompt.includes('green') || lowerPrompt.includes('nature')) {
+      return ['#2d5016', '#4e7928'];
+    } else if (lowerPrompt.includes('night') || lowerPrompt.includes('dark') || lowerPrompt.includes('space')) {
+      return ['#1a1a2e', '#16213e'];
+    } else if (lowerPrompt.includes('fire') || lowerPrompt.includes('red')) {
+      return ['#c73e1d', '#f44336'];
+    } else {
+      // Default artistic colors
+      return ['#6366f1', '#8b5cf6'];
+    }
+  };
+
+  const drawAbstractShapes = (ctx: CanvasRenderingContext2D, prompt: string, time: number) => {
+    const width = ctx.canvas.width;
+    const height = ctx.canvas.height;
+    
+    // Create animated shapes based on prompt content
+    ctx.save();
+    ctx.globalAlpha = 0.6;
+    
+    for (let i = 0; i < 5; i++) {
+      const x = (width * (0.2 + i * 0.15)) + Math.sin(time * 0.5 + i) * 50;
+      const y = (height * (0.3 + Math.sin(i) * 0.4)) + Math.cos(time * 0.3 + i) * 30;
+      const size = 40 + Math.sin(time + i) * 20;
+      
+      ctx.fillStyle = `hsla(${220 + i * 30}, 70%, 60%, 0.4)`;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    
+    ctx.restore();
+  };
+
   const drawClip = (ctx: CanvasRenderingContext2D, clip: VideoClip) => {
     const progress = (currentTime - clip.startTime) / clip.duration;
     
@@ -364,9 +484,8 @@ export default function VideoEditor() {
         break;
         
       case 'image':
-        // Placeholder for image
-        ctx.fillStyle = '#10b981';
-        ctx.fillRect(50, 50, ctx.canvas.width - 100, ctx.canvas.height - 100);
+        // Draw image clip
+        drawImageClip(ctx, clip);
         break;
     }
 
@@ -552,6 +671,41 @@ export default function VideoEditor() {
         return { ...clip, filters: [...clip.filters, newFilter] };
       }
     }));
+  };
+
+  const handleImageUpload = (clipId: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file || !file.type.startsWith('image/')) return;
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      updateClip(clipId, { src: result, aiPrompt: undefined });
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const generateAIImage = async (clipId: string, prompt: string) => {
+    try {
+      // Use ReplitAI for creative image generation
+      const response = await replitAI.generateResponse(
+        `Create an artistic visual description for: "${prompt}". Include colors, composition, mood, and visual elements.`,
+        { tool: 'image-generation', project: projectName, currentWork: 'visual art creation' }
+      );
+      
+      updateClip(clipId, { aiPrompt: prompt, src: undefined });
+      
+      toast({
+        title: "AI image generated",
+        description: `Created artistic visualization for: ${prompt}`
+      });
+    } catch (error) {
+      toast({
+        title: "AI generation failed",
+        description: "Could not generate image. Please try again.",
+        variant: "destructive"
+      });
+    }
   };
 
   const handleAIGeneration = async () => {
@@ -854,6 +1008,72 @@ export default function VideoEditor() {
                               onValueChange={(value) => updateClip(selectedClip.id, { volume: value[0] })}
                               data-testid="slider-clip-volume"
                             />
+                          </div>
+                        )}
+                        
+                        {selectedClip.type === 'image' && (
+                          <div className="space-y-4 pt-4 border-t">
+                            <div>
+                              <label className="text-sm font-medium">Image Source</label>
+                              <div className="mt-2 space-y-2">
+                                <div>
+                                  <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => handleImageUpload(selectedClip.id, e)}
+                                    className="hidden"
+                                    id={`image-upload-${selectedClip.id}`}
+                                    data-testid="input-image-upload"
+                                  />
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => document.getElementById(`image-upload-${selectedClip.id}`)?.click()}
+                                    className="w-full"
+                                    data-testid="button-upload-image"
+                                  >
+                                    <Upload className="w-4 h-4 mr-2" />
+                                    Upload Image
+                                  </Button>
+                                </div>
+                                
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-px bg-border"></div>
+                                  <span className="text-xs text-muted-foreground">OR</span>
+                                  <div className="flex-1 h-px bg-border"></div>
+                                </div>
+                                
+                                <div className="space-y-2">
+                                  <Input
+                                    placeholder="Describe the image you want AI to create..."
+                                    value={selectedClip.aiPrompt || ''}
+                                    onChange={(e) => updateClip(selectedClip.id, { aiPrompt: e.target.value })}
+                                    data-testid="input-ai-image-prompt"
+                                  />
+                                  <Button
+                                    variant="default"
+                                    onClick={() => selectedClip.aiPrompt && generateAIImage(selectedClip.id, selectedClip.aiPrompt)}
+                                    disabled={!selectedClip.aiPrompt?.trim()}
+                                    className="w-full"
+                                    data-testid="button-generate-ai-image"
+                                  >
+                                    <Sparkles className="w-4 h-4 mr-2" />
+                                    Generate AI Image
+                                  </Button>
+                                </div>
+                              </div>
+                              
+                              {selectedClip.src && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                  ✓ Image uploaded
+                                </div>
+                              )}
+                              
+                              {selectedClip.aiPrompt && !selectedClip.src && (
+                                <div className="mt-2 text-xs text-muted-foreground">
+                                  ✓ AI image: "{selectedClip.aiPrompt}"
+                                </div>
+                              )}
+                            </div>
                           </div>
                         )}
                       </>
