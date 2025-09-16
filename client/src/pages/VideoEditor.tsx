@@ -130,6 +130,16 @@ export default function VideoEditor() {
   const [projectName, setProjectName] = useState('Untitled Video');
   const [renderProgress, setRenderProgress] = useState(0);
   const [isRendering, setIsRendering] = useState(false);
+  
+  // Drag state - using refs to avoid stale closure issues
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef({
+    isDragging: false,
+    clipId: null as string | null,
+    startX: 0,
+    startTime: 0,
+    clipDuration: 0
+  });
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const timelineRef = useRef<HTMLDivElement>(null);
@@ -795,6 +805,78 @@ export default function VideoEditor() {
     return trackNames[layerIndex as keyof typeof trackNames] || `Track ${layerIndex}`;
   };
 
+  // Drag functionality
+  const handleMouseDown = (e: React.MouseEvent, clipId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const clip = clips.find(c => c.id === clipId);
+    if (!clip) return;
+    
+    // Update both state and ref synchronously
+    setIsDragging(true);
+    dragRef.current = {
+      isDragging: true,
+      clipId,
+      startX: e.clientX,
+      startTime: clip.startTime,
+      clipDuration: clip.duration
+    };
+    setSelectedClip(clip);
+    
+    // Disable text selection during drag
+    document.body.classList.add('select-none');
+    
+    // Add global mouse listeners
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleMouseMove = (e: MouseEvent) => {
+    const drag = dragRef.current;
+    if (!drag.isDragging || !drag.clipId || !timelineRef.current) return;
+    
+    const timelineRect = timelineRef.current.getBoundingClientRect();
+    const deltaX = e.clientX - drag.startX;
+    const timelineWidth = timelineRect.width;
+    const deltaTime = (deltaX / timelineWidth) * timeline.duration;
+    
+    let newStartTime = drag.startTime + deltaTime;
+    
+    // Clamp to timeline bounds - ensure clip stays fully within timeline
+    newStartTime = Math.max(0, Math.min(newStartTime, timeline.duration - drag.clipDuration));
+    
+    // Update clip position
+    updateClip(drag.clipId, { startTime: newStartTime });
+  };
+
+  const handleMouseUp = () => {
+    // Update both state and ref
+    setIsDragging(false);
+    dragRef.current = {
+      isDragging: false,
+      clipId: null,
+      startX: 0,
+      startTime: 0,
+      clipDuration: 0
+    };
+    
+    // Re-enable text selection
+    document.body.classList.remove('select-none');
+    
+    // Remove global mouse listeners
+    document.removeEventListener('mousemove', handleMouseMove);
+    document.removeEventListener('mouseup', handleMouseUp);
+  };
+
+  // Cleanup drag listeners on unmount
+  useEffect(() => {
+    return () => {
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, []);
+
   const handleAIGeneration = async () => {
     if (!aiPrompt.trim()) return;
 
@@ -1008,7 +1090,7 @@ export default function VideoEditor() {
               <CardContent>
                 <div className="space-y-4">
                   {/* Timeline Container - Wraps ruler and tracks for unified playhead */}
-                  <div className="relative">
+                  <div className="relative" ref={timelineRef}>
                     {/* Timeline Ruler */}
                     <div className="relative">
                       <div className="flex border-b">
@@ -1068,17 +1150,26 @@ export default function VideoEditor() {
                                   return (
                                     <div
                                       key={clip.id}
-                                      className={`absolute top-1 bottom-1 rounded cursor-pointer transition-all duration-200 ${bgColor} ${
+                                      className={`absolute top-1 bottom-1 rounded transition-all duration-200 ${bgColor} ${
                                         selectedClip?.id === clip.id 
                                           ? 'ring-2 ring-primary ring-offset-1' 
                                           : 'hover:brightness-110'
+                                      } ${
+                                        isDragging && dragRef.current.clipId === clip.id 
+                                          ? 'cursor-grabbing opacity-80 z-50' 
+                                          : 'cursor-grab hover:cursor-grab'
                                       }`}
                                       style={{
                                         left: `${leftPosition}%`,
                                         width: `${width}%`,
                                         minWidth: '20px'
                                       }}
-                                      onClick={() => setSelectedClip(clip)}
+                                      onClick={(e) => {
+                                        if (!isDragging) {
+                                          setSelectedClip(clip);
+                                        }
+                                      }}
+                                      onMouseDown={(e) => handleMouseDown(e, clip.id)}
                                       data-testid={`clip-block-${clip.id}`}
                                     >
                                       <div className="flex items-center justify-between h-full px-2 text-white text-xs">
