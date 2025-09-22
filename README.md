@@ -1,8 +1,10 @@
 # CreativeAI Studio - AI-Powered Creative Platform
 
+This project is 100% vibecoded using Replit and Replit Agent.
+
 ## Overview
 
-CreativeAI Studio is a comprehensive creative platform that combines multiple AI-powered creative tools into a unified workspace. The platform integrates 3D modeling, music production, video editing, and code development with real-time collaboration features and AI assistance. Built with React and Express, it provides a modern web-based creative environment designed for professional creators and teams.
+CreativeAI Studio is a comprehensive creative platform that combines multiple AI-powered creative tools into a unified workspace. The platform integrates 3D modeling, music production, video editing, and code development with real-time collaboration features and AI assistance. Built with React and Express, it provides a modern web-based creative environment designed for professional creators and teams.~~~~
 
 ### Recent Updates (September 16, 2025)
 - **Added object rotation controls**: Shift+drag to rotate objects interactively, plus manual rotation inputs in Properties panel
